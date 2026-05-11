@@ -1,0 +1,21 @@
+{
+    "replies": {
+        "what is cisetu": "CISETU is a complete village governance platform that helps gram panchayats manage property records, automate tax calculations, and send bulk WhatsApp communications — all from one unified portal.",
+        "pricing": "We offer two tiers:\n\n**CISETU Vikas** — ₹18,999/yr\n1 user, up to 1,000 properties, 1 bot included.\n\n**CISETU Pragati** — ₹24,999/yr\nUnlimited users & properties, 10 bots, 24×7 support, custom domain.",
+        "whatsapp": "Our Bulk Dispatch Node sends high-volume rich media messages with intelligent anti-ban delay protocols. Track delivery, manage contact clusters, and achieve near 100% open rates.",
+        "property": "The Smart Directory manages complex property arrays, occupant details, and automated XLSX ledger exports — handling 5,000+ properties with real-time sync.",
+        "tax": "The Vyvsay Tax Engine automates municipal business tax calculations, generates digital receipts, and tracks pending dues — reducing manual errors by 99%.",
+        "vyvsay": "The Vyvsay Tax Engine automates municipal business tax calculations, generates digital receipts, and tracks pending dues — reducing manual errors by 99%.",
+        "support": "Contact us via WhatsApp at +91 95589 81800 or email hello@cisetu.com. Pragati tier users get 24×7 dedicated support.",
+        "help": "Contact us via WhatsApp at +91 95589 81800 or email hello@cisetu.com. Pragati tier users get 24×7 dedicated support.",
+        "demo": "We'd love to show you around! Contact us via WhatsApp at +91 95589 81800 to schedule a live walkthrough."
+    },
+    "default_reply": "For detailed information, please contact our team via WhatsApp at +91 95589 81800 or email hello@cisetu.com.",
+    "typing_speed": 3000,
+    "suggestions": [
+        "What is CISETU?",
+        "Pricing plans",
+        "WhatsApp features",
+        "Property management"
+    ]
+}
