@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { useForm, Head } from '@inertiajs/vue3';
 import { ShieldCheck } from 'lucide-vue-next';
 import { onUnmounted, ref } from 'vue';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
@@ -21,7 +21,7 @@ type Props = {
     twoFactorEnabled?: boolean;
 };
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     canManageTwoFactor: false,
     requiresConfirmation: false,
     twoFactorEnabled: false,
@@ -41,6 +41,41 @@ defineOptions({
 const { hasSetupData, clearTwoFactorAuthData } = useTwoFactorAuth();
 const showSetupModal = ref<boolean>(false);
 
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const updatePassword = () => {
+    passwordForm.put(SecurityController.update.url(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordForm.reset();
+            toast.success('Password updated successfully');
+        },
+        onError: () => toast.error('Failed to update password. Please check for errors.'),
+    });
+};
+
+const enable2faForm = useForm({});
+const enable2fa = () => {
+    enable2faForm.post(enable.url(), {
+        onSuccess: () => {
+            showSetupModal.value = true;
+        },
+    });
+};
+
+const disable2faForm = useForm({});
+const disable2fa = () => {
+    disable2faForm.delete(disable.url(), {
+        onSuccess: () => {
+            toast.success('Two-factor authentication disabled');
+        },
+    });
+};
+
 onUnmounted(() => clearTwoFactorAuthData());
 </script>
 
@@ -56,124 +91,125 @@ onUnmounted(() => clearTwoFactorAuthData());
             description="Ensure your account is using a long, random password to stay secure"
         />
 
-        <Form
-            v-bind="SecurityController.update.form()"
-            :options="{
-                preserveScroll: true,
-            }"
-            reset-on-success
-            :reset-on-error="[
-                'password',
-                'password_confirmation',
-                'current_password',
-            ]"
-            class="space-y-6"
-            novalidate
-            @success="toast.success('Password updated successfully')"
-            @error="toast.error('Failed to update password. Please check for errors.')"
-            v-slot="{ errors, processing }"
-        >
+        <form @submit.prevent="updatePassword" class="space-y-6" novalidate>
             <div class="grid gap-2">
                 <Label for="current_password">Current password</Label>
                 <PasswordInput
                     id="current_password"
+                    v-model="passwordForm.current_password"
                     name="current_password"
                     class="mt-1 block w-full"
                     autocomplete="current-password"
                     placeholder="Current password"
-                    :error="errors.current_password"
+                    :error="passwordForm.errors.current_password"
                 />
-                <InputError :message="errors.current_password" />
+                <InputError :message="passwordForm.errors.current_password" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="password">New password</Label>
                 <PasswordInput
                     id="password"
+                    v-model="passwordForm.password"
                     name="password"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="New password"
-                    :error="errors.password"
+                    :error="passwordForm.errors.password"
                 />
-                <InputError :message="errors.password" />
+                <InputError :message="passwordForm.errors.password" />
             </div>
 
             <div class="grid gap-2">
                 <Label for="password_confirmation">Confirm password</Label>
                 <PasswordInput
                     id="password_confirmation"
+                    v-model="passwordForm.password_confirmation"
                     name="password_confirmation"
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                     placeholder="Confirm password"
-                    :error="errors.password_confirmation"
+                    :error="passwordForm.errors.password_confirmation"
                 />
-                <InputError :message="errors.password_confirmation" />
+                <InputError :message="passwordForm.errors.password_confirmation" />
             </div>
 
             <div class="flex items-center gap-4">
                 <Button
-                    :disabled="processing"
+                    :disabled="passwordForm.processing"
                     data-test="update-password-button"
                 >
                     Save password
                 </Button>
             </div>
-        </Form>
+        </form>
     </div>
 
-    <div v-if="canManageTwoFactor" class="space-y-6">
+    <div v-if="canManageTwoFactor" class="pt-10 space-y-6 border-t mt-10">
         <Heading
             variant="small"
             title="Two-factor authentication"
-            description="Manage your two-factor authentication settings"
+            description="Add an extra layer of security to your account"
         />
 
         <div
             v-if="!twoFactorEnabled"
-            class="flex flex-col items-start justify-start space-y-4"
+            class="flex flex-col items-start justify-start space-y-6 bg-muted/20 p-6 rounded-xl border border-dashed"
         >
-            <p class="text-sm text-muted-foreground">
-                When you enable two-factor authentication, you will be prompted
-                for a secure pin during login. This pin can be retrieved from a
-                TOTP-supported application on your phone.
-            </p>
+            <div class="flex items-start gap-4">
+                <div class="p-3 rounded-full bg-primary/10 border border-primary/20">
+                    <ShieldCheck class="size-6 text-primary" />
+                </div>
+                <div class="space-y-1">
+                    <p class="text-sm font-bold text-foreground">Enhanced account protection</p>
+                    <p class="text-sm text-muted-foreground max-w-xl">
+                        When you enable two-factor authentication, you will be prompted
+                        for a secure pin during login. This pin can be retrieved from a
+                        TOTP-supported application on your phone like Google Authenticator or Authy.
+                    </p>
+                </div>
+            </div>
 
             <div>
-                <Button v-if="hasSetupData" @click="showSetupModal = true">
-                    <ShieldCheck />Continue setup
+                <Button v-if="hasSetupData" @click="showSetupModal = true" class="gap-2">
+                    <ShieldCheck class="size-4" />Continue setup
                 </Button>
-                <Form
+                <form
                     v-else
-                    v-bind="enable.form()"
-                    @success="showSetupModal = true"
-                    #default="{ processing }"
+                    @submit.prevent="enable2fa"
                 >
-                    <Button type="submit" :disabled="processing">
-                        Enable 2FA
+                    <Button type="submit" :disabled="enable2faForm.processing" class="gap-2">
+                        <ShieldCheck class="size-4" /> Enable 2FA
                     </Button>
-                </Form>
+                </form>
             </div>
         </div>
 
-        <div v-else class="flex flex-col items-start justify-start space-y-4">
-            <p class="text-sm text-muted-foreground">
-                You will be prompted for a secure, random pin during login,
-                which you can retrieve from the TOTP-supported application on
-                your phone.
-            </p>
+        <div v-else class="space-y-8">
+            <div class="flex flex-col items-start justify-start space-y-6 bg-emerald-500/5 p-6 rounded-xl border border-emerald-500/20">
+                <div class="flex items-start gap-4">
+                    <div class="p-3 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                        <ShieldCheck class="size-6 text-emerald-600" />
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-sm font-bold text-emerald-900 dark:text-emerald-400">Two-factor authentication is active</p>
+                        <p class="text-sm text-emerald-800/70 dark:text-emerald-400/70 max-w-xl">
+                            Your account is protected by an additional security layer. You will be prompted for a secure, random pin from your authenticator app during every login.
+                        </p>
+                    </div>
+                </div>
 
-            <div class="relative inline">
-                <Form v-bind="disable.form()" #default="{ processing }">
+                <form @submit.prevent="disable2fa">
                     <Button
                         variant="destructive"
                         type="submit"
-                        :disabled="processing"
+                        size="sm"
+                        :disabled="disable2faForm.processing"
+                        class="gap-2"
                     >
                         Disable 2FA
                     </Button>
-                </Form>
+                </form>
             </div>
 
             <TwoFactorRecoveryCodes />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { useClipboard } from '@vueuse/core';
 import { Check, Copy, ScanLine } from 'lucide-vue-next';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
@@ -23,6 +23,7 @@ import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
+import { toast } from 'vue-sonner';
 
 type Props = {
     requiresConfirmation: boolean;
@@ -34,7 +35,6 @@ const { resolvedAppearance } = useAppearance();
 const props = defineProps<Props>();
 const isOpen = defineModel<boolean>('isOpen');
 
-const { copy, copied } = useClipboard();
 const { qrCodeSvg, manualSetupKey, clearSetupData, fetchSetupData, errors } =
     useTwoFactorAuth();
 
@@ -42,6 +42,26 @@ const showVerificationStep = ref(false);
 const code = ref<string>('');
 
 const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
+
+const form = useForm({
+    code: '',
+});
+
+const { copy } = useClipboard({ legacy: true });
+
+const copyToClipboard = async () => {
+    if (!manualSetupKey.value) {
+        toast.error('No key available to copy');
+        return;
+    }
+    
+    try {
+        await copy(manualSetupKey.value);
+        toast.success('Key copied to clipboard');
+    } catch (err) {
+        toast.error('Failed to copy key');
+    }
+};
 
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
@@ -91,6 +111,20 @@ const resetModalState = () => {
 
     showVerificationStep.value = false;
     code.value = '';
+    form.reset();
+};
+
+const submitVerification = () => {
+    form.code = code.value;
+    form.post(confirm.url(), {
+        preserveScroll: true,
+        onSuccess: () => {
+            isOpen.value = false;
+        },
+        onFinish: () => {
+            code.value = '';
+        },
+    });
 };
 
 watch(
@@ -196,7 +230,7 @@ watch(
                             <div
                                 class="absolute inset-0 top-1/2 h-px w-full bg-border"
                             />
-                            <span class="relative bg-card px-2 py-1"
+                            <span class="relative bg-card px-2 py-1 text-xs text-muted-foreground"
                                 >or, enter the code manually</span
                             >
                         </div>
@@ -205,30 +239,29 @@ watch(
                             class="flex w-full items-center justify-center space-x-2"
                         >
                             <div
-                                class="flex w-full items-stretch overflow-hidden rounded-xl border border-border"
+                                class="flex w-full items-stretch overflow-hidden rounded-xl border border-border bg-muted/30 shadow-inner"
                             >
                                 <div
                                     v-if="!manualSetupKey"
-                                    class="flex h-full w-full items-center justify-center bg-muted p-3"
+                                    class="flex h-11 w-full items-center justify-center p-3"
                                 >
                                     <Spinner />
                                 </div>
                                 <template v-else>
                                     <input
+                                        id="manual-setup-key-input"
                                         type="text"
                                         readonly
                                         :value="manualSetupKey"
-                                        class="h-full w-full bg-background p-3 text-foreground"
+                                        class="h-11 w-full bg-transparent px-4 text-sm font-mono tracking-wider text-foreground outline-none"
                                     />
                                     <button
-                                        @click="copy(manualSetupKey || '')"
-                                        class="relative block h-auto border-l border-border px-3 hover:bg-muted"
+                                        type="button"
+                                        @click="copyToClipboard"
+                                        class="relative block h-auto border-l border-border px-4 hover:bg-muted transition-colors"
+                                        title="Copy setup key"
                                     >
-                                        <Check
-                                            v-if="copied"
-                                            class="w-4 text-green-500"
-                                        />
-                                        <Copy v-else class="w-4" />
+                                        <Copy class="size-4" />
                                     </button>
                                 </template>
                             </div>
@@ -237,27 +270,22 @@ watch(
                 </template>
 
                 <template v-else>
-                    <Form
-                        v-bind="confirm.form()"
-                        error-bag="confirmTwoFactorAuthentication"
-                        reset-on-error
-                        @finish="code = ''"
-                        @success="isOpen = false"
-                        v-slot="{ errors, processing }"
+                    <form
+                        @submit.prevent="submitVerification"
+                        class="w-full space-y-6"
                     >
-                        <input type="hidden" name="code" :value="code" />
                         <div
                             ref="pinInputContainerRef"
-                            class="relative w-full space-y-3"
+                            class="relative w-full space-y-4"
                         >
                             <div
-                                class="flex w-full flex-col items-center justify-center space-y-3 py-2"
+                                class="flex w-full flex-col items-center justify-center space-y-4 py-2"
                             >
                                 <InputOTP
                                     id="otp"
                                     v-model="code"
                                     :maxlength="6"
-                                    :disabled="processing"
+                                    :disabled="form.processing"
                                     autofocus
                                 >
                                     <InputOTPGroup>
@@ -268,29 +296,30 @@ watch(
                                         />
                                     </InputOTPGroup>
                                 </InputOTP>
-                                <InputError :message="errors?.code" />
+                                <InputError :message="form.errors.code" />
                             </div>
 
-                            <div class="flex w-full items-center space-x-5">
+                            <div class="flex w-full items-center space-x-3">
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    class="w-auto flex-1"
+                                    class="flex-1 h-11"
                                     @click="showVerificationStep = false"
-                                    :disabled="processing"
+                                    :disabled="form.processing"
                                 >
                                     Back
                                 </Button>
                                 <Button
                                     type="submit"
-                                    class="w-auto flex-1"
-                                    :disabled="processing || code.length < 6"
+                                    class="flex-1 h-11"
+                                    :disabled="form.processing || code.length < 6"
                                 >
+                                    <Spinner v-if="form.processing" class="mr-2" />
                                     Confirm
                                 </Button>
                             </div>
                         </div>
-                    </Form>
+                    </form>
                 </template>
             </div>
         </DialogContent>
