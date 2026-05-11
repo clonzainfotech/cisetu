@@ -50,8 +50,7 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" href="/favicon.ico?v={{ filemtime(public_path('favicon.ico')) }}" sizes="any">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <!-- Google Fonts (Optimized to prevent render-blocking) -->
