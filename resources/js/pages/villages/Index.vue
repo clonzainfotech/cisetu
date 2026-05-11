@@ -135,7 +135,7 @@ const generateRandomPassword = (length: number = 16): string => {
 };
 
 const logoPreviewUrl = computed(() => {
-    if (form.logo instanceof File) {
+    if (typeof File !== 'undefined' && form.logo instanceof File) {
         return URL.createObjectURL(form.logo);
     }
     return '';
@@ -638,7 +638,7 @@ onMounted(() => {
                             <div class="flex items-center gap-4 mb-2">
                                 <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-muted/20 p-2 overflow-hidden shadow-inner relative group">
                                     <template v-if="form.logo">
-                                        <img v-if="form.logo instanceof File" :src="logoPreviewUrl" class="h-full w-full object-contain" />
+                                        <img v-if="typeof File !== 'undefined' && form.logo instanceof File" :src="logoPreviewUrl" class="h-full w-full object-contain" />
                                         <div v-else class="text-[8px] font-black text-emerald-600 text-center uppercase tracking-tighter">Seal<br>Ready</div>
                                     </template>
                                     <template v-else-if="editingVillage?.logo_url">
