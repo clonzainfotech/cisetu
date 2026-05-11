@@ -2035,6 +2035,8 @@ nav.scrolled {
     transform: translateY(10px);
     transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-height: 240px;
+    overflow-y: auto;
 }
 .select-options-wrap.show {
     opacity: 1;
