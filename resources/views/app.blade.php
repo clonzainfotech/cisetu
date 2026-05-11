@@ -4,6 +4,26 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        <!-- Basic SEO -->
+        <meta name="description" content="CiSeTU - Digital villages, connected at the scale of your community. The platform for modern rural administration — automated, secure, and built for a transparent future.">
+        <meta name="keywords" content="CiSeTU, digital village, rural administration, panchayat, gram panchayat, smart village, governance, e-gram">
+        <meta name="author" content="CiSeTU">
+        <meta name="robots" content="index, follow">
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:title" content="{{ config('app.name', 'CiSeTU') }}">
+        <meta property="og:description" content="CiSeTU - Digital villages, connected at the scale of your community. The platform for modern rural administration.">
+        <meta property="og:image" content="{{ asset('images/logo.png') }}">
+        <meta property="og:site_name" content="CiSeTU">
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image">
+        <meta property="twitter:url" content="{{ url()->current() }}">
+        <meta property="twitter:title" content="{{ config('app.name', 'CiSeTU') }}">
+        <meta property="twitter:description" content="CiSeTU - Digital villages, connected at the scale of your community.">
+        <meta property="twitter:image" content="{{ asset('images/logo.png') }}">
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
