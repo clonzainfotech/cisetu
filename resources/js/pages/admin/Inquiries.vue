@@ -213,167 +213,169 @@ defineOptions({
                 description="Manage demo and subscription requests from the platform"
             />
         </div>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-muted/30 p-4 rounded-xl border border-dashed">
+            <div class="flex items-center gap-2 px-2">
+                <div class="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                <span class="text-xs font-black uppercase tracking-widest text-foreground/70">Incoming Stream</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="relative w-full sm:w-64">
+                    <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search leads..."
+                        class="pl-9 h-9 text-xs ring-0 focus-visible:ring-1 bg-background"
+                        v-model="search"
+                    />
+                </div>
+                <Select v-model="statusFilter">
+                    <SelectTrigger class="w-[130px] h-9 text-xs bg-background">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select v-model="typeFilter">
+                    <SelectTrigger class="w-[130px] h-9 text-xs bg-background">
+                        <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="demo">Demo</SelectItem>
+                        <SelectItem value="subscription">Subscription</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Button 
+                    v-if="activeFilterCount > 0" 
+                    variant="ghost" 
+                    size="sm" 
+                    class="h-9 px-2 text-xs text-muted-foreground hover:text-foreground" 
+                    @click="statusFilter = 'all'; typeFilter = 'all'"
+                >
+                    Reset
+                </Button>
+            </div>
+        </div>
+        <div class="min-h-0 flex-1 flex flex-col gap-3">
+            <div
+                v-if="inquiries.data.length === 0"
+                class="rounded-lg border border-dashed p-12 text-center text-muted-foreground bg-background"
+            >
+                <div class="flex flex-col items-center gap-2">
+                    <MessageSquare class="h-8 w-8 opacity-20" />
+                    <p class="text-sm font-medium">No inquiries found in the stream.</p>
+                </div>
+            </div>
 
-        <Card class="overflow-hidden border-none shadow-sm ring-1 ring-border">
-            <CardHeader class="border-b bg-muted/30 px-6 py-4">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <CardTitle class="text-base font-bold uppercase tracking-wider text-foreground/70">Incoming Stream</CardTitle>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="relative w-full sm:w-64">
-                            <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search leads..."
-                                class="pl-9 h-9 text-xs ring-0 focus-visible:ring-1"
-                                v-model="search"
-                            />
+            <div 
+                v-for="inquiry in inquiries.data" 
+                :key="inquiry.id" 
+                class="flex items-center justify-between gap-4 rounded-xl border bg-background p-5 hover:bg-muted/5 transition-all shadow-sm group"
+            >
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+                    <!-- Prospect Details -->
+                    <div class="flex flex-col gap-1.5 min-w-0">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Prospect Details</span>
+                        <span class="font-bold text-foreground text-sm truncate">{{ inquiry.name }}</span>
+                        <div class="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
+                            <Mail class="h-3.5 w-3.5 shrink-0" />
+                            {{ inquiry.email }}
                         </div>
-                        <Select v-model="statusFilter">
-                            <SelectTrigger class="w-[130px] h-9 text-xs">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="contacted">Contacted</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select v-model="typeFilter">
-                            <SelectTrigger class="w-[130px] h-9 text-xs">
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="demo">Demo</SelectItem>
-                                <SelectItem value="subscription">Subscription</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button 
-                            v-if="activeFilterCount > 0" 
-                            variant="ghost" 
-                            size="sm" 
-                            class="h-9 px-2 text-xs text-muted-foreground" 
-                            @click="statusFilter = 'all'; typeFilter = 'all'"
-                        >
-                            Clear
-                        </Button>
+                        <div class="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
+                            <Phone class="h-3.5 w-3.5 shrink-0" />
+                            {{ inquiry.phone }}
+                        </div>
+                    </div>
+
+                    <!-- Village Node -->
+                    <div class="flex flex-col gap-1.5 min-w-0">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Village Node</span>
+                        <div class="flex items-center gap-2 text-sm font-bold text-foreground truncate">
+                            <MapPin class="h-3.5 w-3.5 shrink-0 text-primary" />
+                            {{ inquiry.village_name }}
+                        </div>
+                        <span class="text-[11px] text-muted-foreground uppercase tracking-widest pl-5 truncate">{{ inquiry.district_name }}</span>
+                    </div>
+
+                    <!-- Request Profile -->
+                    <div class="flex flex-col gap-1.5 min-w-0">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50 mb-1">Request Profile</span>
+                        <div class="flex items-center gap-2">
+                            <Badge :variant="inquiry.type === 'subscription' ? 'default' : 'secondary'" class="text-[9px] font-black uppercase px-2 h-5">
+                                {{ inquiry.type }}
+                            </Badge>
+                            <span v-if="inquiry.plan" class="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">
+                                {{ inquiry.plan.name }}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
+                            <Calendar class="h-3.5 w-3.5 shrink-0" />
+                            {{ formatDate(inquiry.created_at) }}
+                        </div>
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent class="p-0">
-                <Table>
-                    <TableHeader class="bg-muted/20">
-                        <TableRow>
-                            <TableHead class="w-[200px] text-[10px] font-black uppercase tracking-widest py-4">Prospect Details</TableHead>
-                            <TableHead class="text-[10px] font-black uppercase tracking-widest">Village Node</TableHead>
-                            <TableHead class="text-[10px] font-black uppercase tracking-widest">Request Profile</TableHead>
-                            <TableHead class="text-[10px] font-black uppercase tracking-widest text-center">Status</TableHead>
-                            <TableHead class="w-[100px] text-right"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow v-if="inquiries.data.length === 0">
-                            <TableCell colspan="5" class="h-32 text-center text-muted-foreground">
-                                <div class="flex flex-col items-center gap-2">
-                                    <MessageSquare class="h-8 w-8 opacity-20" />
-                                    <p class="text-sm font-medium">No inquiries found in the stream.</p>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                        <TableRow v-for="inquiry in inquiries.data" :key="inquiry.id" class="group transition-colors">
-                            <TableCell class="py-4">
-                                <div class="flex flex-col gap-1">
-                                    <span class="font-bold text-foreground">{{ inquiry.name }}</span>
-                                    <div class="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                        <Mail class="h-3 w-3" />
-                                        {{ inquiry.email }}
-                                    </div>
-                                    <div class="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                        <Phone class="h-3 w-3" />
-                                        {{ inquiry.phone }}
-                                    </div>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2 text-xs font-bold text-foreground">
-                                        <MapPin class="h-3 w-3 text-primary" />
-                                        {{ inquiry.village_name }}
-                                    </div>
-                                    <span class="text-[10px] text-muted-foreground uppercase tracking-widest pl-5">{{ inquiry.district_name }}</span>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div class="flex flex-col gap-1.5">
-                                    <div class="flex items-center gap-2">
-                                        <Badge :variant="inquiry.type === 'subscription' ? 'default' : 'secondary'" class="text-[9px] font-black uppercase px-2 h-5">
-                                            {{ inquiry.type }}
-                                        </Badge>
-                                        <span v-if="inquiry.plan" class="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">
-                                            {{ inquiry.plan.name }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                        <Calendar class="h-3 w-3" />
-                                        {{ formatDate(inquiry.created_at) }}
-                                    </div>
-                                </div>
-                            </TableCell>
-                            <TableCell class="text-center">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger as-child>
-                                        <Button variant="ghost" size="sm" class="h-7 px-2 gap-2 text-[10px] font-black uppercase tracking-widest ring-0 focus-visible:ring-0">
-                                            <component :is="getStatusBadge(inquiry.status).icon" class="h-3.5 w-3.5" :class="`text-${getStatusBadge(inquiry.status).variant}`" />
-                                            {{ getStatusBadge(inquiry.status).label }}
-                                            <ChevronDown class="h-3 w-3 opacity-50" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" class="w-40">
-                                        <DropdownMenuLabel class="text-[10px] font-black uppercase tracking-widest opacity-50">Transition Status</DropdownMenuLabel>
-                                        <DropdownMenuItem @click="updateStatus(inquiry.id, 'pending')" class="gap-2 text-xs">
-                                            <Clock class="h-3.5 w-3.5 text-amber-500" /> Pending
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem @click="updateStatus(inquiry.id, 'contacted')" class="gap-2 text-xs">
-                                            <MessageSquare class="h-3.5 w-3.5 text-blue-500" /> Contacted
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem @click="updateStatus(inquiry.id, 'completed')" class="gap-2 text-xs">
-                                            <CheckCircle class="h-3.5 w-3.5 text-emerald-500" /> Completed
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem @click="updateStatus(inquiry.id, 'rejected')" class="gap-2 text-xs">
-                                            <XCircle class="h-3.5 w-3.5 text-destructive" /> Rejected
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
-                            <TableCell class="text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger as-child>
-                                        <Button variant="ghost" size="icon" class="h-8 w-8 ring-0 focus-visible:ring-0">
-                                            <MoreHorizontal class="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" class="w-48">
-                                        <DropdownMenuLabel class="text-[10px] font-black uppercase tracking-widest opacity-50">Node Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem class="gap-2 text-xs" @click="openEmail(inquiry)">
-                                            <Mail class="h-3.5 w-3.5" /> Email Contact
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem class="gap-2 text-xs" @click="openDetails(inquiry)">
-                                            <ArrowRight class="h-3.5 w-3.5" /> View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem @click="deleteInquiry(inquiry.id)" class="gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                            <Trash2 class="h-3.5 w-3.5" /> Purge Record
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+
+                <!-- Status & Actions -->
+                <div class="flex items-center gap-6 shrink-0 border-l pl-6 py-1">
+                    <div class="flex flex-col items-center gap-1.5 min-w-[120px]">
+                        <span class="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Lead Status</span>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" size="sm" class="h-9 px-3 gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted/50 shadow-sm border-zinc-200">
+                                    <div :class="['h-2 w-2 rounded-full', inquiry.status === 'pending' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' : inquiry.status === 'contacted' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)]' : inquiry.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]']"></div>
+                                    {{ inquiry.status }}
+                                    <ChevronDown class="h-3 w-3 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" class="w-40">
+                                <DropdownMenuLabel class="text-[10px] font-black uppercase tracking-widest opacity-50">Transition Status</DropdownMenuLabel>
+                                <DropdownMenuItem @click="updateStatus(inquiry.id, 'pending')" class="gap-2 text-xs">
+                                    <Clock class="h-3.5 w-3.5 text-amber-500" /> Pending
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="updateStatus(inquiry.id, 'contacted')" class="gap-2 text-xs">
+                                    <MessageSquare class="h-3.5 w-3.5 text-blue-500" /> Contacted
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="updateStatus(inquiry.id, 'completed')" class="gap-2 text-xs">
+                                    <CheckCircle class="h-3.5 w-3.5 text-emerald-500" /> Completed
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="updateStatus(inquiry.id, 'rejected')" class="gap-2 text-xs">
+                                    <XCircle class="h-3.5 w-3.5 text-destructive" /> Rejected
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-1.5">
+                         <span class="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Actions</span>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" size="icon" class="h-9 w-9 rounded-lg shadow-sm hover:bg-muted/80 border-zinc-200">
+                                    <MoreHorizontal class="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" class="w-48">
+                                <DropdownMenuLabel class="text-[10px] font-black uppercase tracking-widest opacity-50">Node Actions</DropdownMenuLabel>
+                                <DropdownMenuItem class="gap-2 text-xs" @click="openEmail(inquiry)">
+                                    <Mail class="h-3.5 w-3.5" /> Email Contact
+                                </DropdownMenuItem>
+                                <DropdownMenuItem class="gap-2 text-xs" @click="openDetails(inquiry)">
+                                    <ArrowRight class="h-3.5 w-3.5" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem @click="deleteInquiry(inquiry.id)" class="gap-2 text-xs text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                    <Trash2 class="h-3.5 w-3.5" /> Purge Record
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="mt-4 flex justify-center">
             <Pagination :meta="{ from: inquiries.from, to: inquiries.to, total: inquiries.total, links: inquiries.links }" />

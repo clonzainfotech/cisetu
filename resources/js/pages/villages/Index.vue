@@ -514,7 +514,7 @@ onMounted(() => {
                         No villages found.
                     </div>
 
-                    <div v-else class="min-h-0 flex-1 overflow-y-auto pr-1">
+                    <div v-else class="min-h-0 flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
                         <div
                             v-for="v in villages.data"
                             :key="v.id"
