@@ -113,7 +113,7 @@ const form = useForm({
     password_length: 16,
     subscription_plan_id: '',
     subscription_start_at: new Date().toISOString().slice(0, 10),
-    subscription_expires_at: '',
+    subscription_expires_at: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 10),
 });
 
 const isSubdomainTouched = ref(false);
@@ -133,6 +133,13 @@ const generateRandomPassword = (length: number = 16): string => {
     }
     return retVal;
 };
+
+const logoPreviewUrl = computed(() => {
+    if (form.logo instanceof File) {
+        return URL.createObjectURL(form.logo);
+    }
+    return '';
+});
 
 const logoVariants = computed(() => {
     if (!form.name_en) return [];
@@ -306,6 +313,8 @@ const editVillage = (village: Props['villages']['data'][0]) => {
     form.subscription_plan_id = village.subscription_plan_id ? String(village.subscription_plan_id) : '';
     form.subscription_start_at = village.subscription_start_at || new Date().toISOString().slice(0, 10);
     form.subscription_expires_at = village.subscription_expires_at || '';
+    form.logo = null;
+    isLogoTouched.value = false;
 };
 
 const cancelEdit = () => {
@@ -550,7 +559,7 @@ onMounted(() => {
                     <CardTitle>{{ editingVillage ? 'Edit village' : 'Add village' }}</CardTitle>
                     <Button v-if="editingVillage" variant="ghost" size="sm" @click="cancelEdit">Cancel</Button>
                 </CardHeader>
-                <CardContent class="lg:h-[calc(100%-4rem)] lg:overflow-y-auto p-6">
+                <CardContent class="lg:h-[calc(100%-4rem)] overflow-y-auto p-6 custom-scrollbar">
                     <form @submit.prevent="submit" class="grid gap-5" novalidate>
                         <div class="grid gap-2">
                             <Label>District</Label>
@@ -627,18 +636,36 @@ onMounted(() => {
                         <div class="grid gap-2">
                             <Label for="logo">Village Logo</Label>
                             <div class="flex items-center gap-4 mb-2">
-                                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-muted/20 p-2 overflow-hidden shadow-inner">
-                                    <img v-if="editingVillage?.logo_url && !isLogoTouched" :src="editingVillage.logo_url" class="h-full w-full object-contain" />
-                                    <Building2 v-else-if="!form.logo" class="h-6 w-6 text-muted-foreground" />
-                                    <span v-else class="text-[8px] font-black text-emerald-600 text-center uppercase tracking-tighter">Selected<br>Seal</span>
+                                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-muted/20 p-2 overflow-hidden shadow-inner relative group">
+                                    <template v-if="form.logo">
+                                        <img v-if="form.logo instanceof File" :src="logoPreviewUrl" class="h-full w-full object-contain" />
+                                        <div v-else class="text-[8px] font-black text-emerald-600 text-center uppercase tracking-tighter">Seal<br>Ready</div>
+                                    </template>
+                                    <template v-else-if="editingVillage?.logo_url">
+                                        <img :src="editingVillage.logo_url" class="h-full w-full object-contain" />
+                                    </template>
+                                    <Building2 v-else class="h-6 w-6 text-muted-foreground" />
+                                    
+                                    <div v-if="form.logo || editingVillage?.logo_url" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" @click="form.logo = null; isLogoTouched = true">
+                                        <XCircle class="h-5 w-5 text-white" />
+                                    </div>
                                 </div>
                                 <div class="w-full">
-                                    <Input
+                                    <input
                                         id="logo"
                                         type="file"
                                         accept="image/*"
-                                        class="cursor-pointer file:text-[10px] file:font-bold file:uppercase file:bg-muted/50 file:border-none file:rounded-md file:mr-4 file:px-3 h-10 shadow-sm"
-                                        @input="() => { isLogoTouched = true; form.logo = $event.target.files[0]; }"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer file:text-[10px] file:font-bold file:uppercase file:bg-muted/50 file:border-none file:rounded-md file:mr-4 file:px-3 shadow-sm"
+                                        @change="(e) => { 
+                                            const file = e.target.files[0];
+                                            if (file && file.size > 2 * 1024 * 1024) {
+                                                toast.error('File is too large! Maximum size is 2MB.');
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            isLogoTouched = true; 
+                                            form.logo = file; 
+                                        }"
                                     />
                                 </div>
                             </div>
@@ -730,6 +757,7 @@ onMounted(() => {
                                     <SelectItem value="gradient">Gradient Perspective</SelectItem>
                                     <SelectItem value="glass">Glass Perspective</SelectItem>
                                     <SelectItem value="compact">Compact Perspective</SelectItem>
+                                    <SelectItem value="simple">Simple Perspective</SelectItem>
                                 </SelectContent>
                             </Select>
                             <InputError :message="form.errors.portal_template" />

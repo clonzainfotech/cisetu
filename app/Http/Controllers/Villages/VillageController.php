@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Villages;
 
 use App\Http\Controllers\Controller;
 use App\Models\District;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\Village;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,7 @@ class VillageController extends Controller
                 'is_active' => $village->is_active,
                 'admin_email' => $village->users()->where('role', 'village_admin')->first()?->email,
                 'portal_template' => $village->portal_template,
+                'password_length' => $village->password_length,
                 'subscription_plan_id' => $village->subscription_plan_id,
                 'subscription_start_at' => $village->subscription_start_at?->toDateString(),
                 'subscription_expires_at' => $village->subscription_expires_at?->toDateString(),
@@ -83,7 +85,7 @@ class VillageController extends Controller
                 'state_name_en' => $d->state->name_en,
             ]);
 
-        $plans = \App\Models\SubscriptionPlan::query()
+        $plans = SubscriptionPlan::query()
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderByRaw('LOWER(name)')
@@ -107,17 +109,24 @@ class VillageController extends Controller
 
         abort_unless($actor->isSuperMasterAdmin(), 403);
 
+        if ($request->isMethod('post') && empty($request->all()) && $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data')) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.'
+            ]);
+        }
+
         $validated = $request->validate([
             'district_id' => ['required', 'exists:districts,id'],
             'name_en' => ['required', 'string', 'max:100'],
             'name_local' => ['nullable', 'string', 'max:100'],
             'subdomain' => ['required', 'string', 'max:50', 'alpha_num', 'unique:villages,subdomain'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:2048'],
             'upi_id' => ['nullable', 'string', 'max:100'],
             'upi_name' => ['nullable', 'string', 'max:100'],
             'payment_note' => ['nullable', 'string', 'max:255'],
             'whatsapp_number' => ['nullable', 'string', 'regex:/^(\+91|91|0)?[6-9]\d{9}$/'],
-            'portal_template' => ['required', 'string', Rule::in(['default', 'premium', 'modern'])],
+            'portal_template' => ['required', 'string', Rule::in(['classic', 'modern', 'minimal', 'vibrant', 'eco', 'royal', 'corporate', 'dark', 'gradient', 'glass', 'compact', 'simple'])],
             'is_active' => ['required', 'boolean'],
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -177,17 +186,24 @@ class VillageController extends Controller
 
         abort_unless($actor->isSuperMasterAdmin(), 403);
 
+        if ($request->isMethod('post') && empty($request->all()) && $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data')) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.'
+            ]);
+        }
+
         $validated = $request->validate([
             'district_id' => ['required', 'exists:districts,id'],
             'name_en' => ['required', 'string', 'max:100'],
             'name_local' => ['nullable', 'string', 'max:100'],
             'subdomain' => ['required', 'string', 'max:50', 'alpha_num', Rule::unique('villages')->ignore($village->id)],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'file', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:2048'],
             'upi_id' => ['nullable', 'string', 'max:100'],
             'upi_name' => ['nullable', 'string', 'max:100'],
             'payment_note' => ['nullable', 'string', 'max:255'],
             'whatsapp_number' => ['nullable', 'string', 'regex:/^(\+91|91|0)?[6-9]\d{9}$/'],
-            'portal_template' => ['required', 'string', Rule::in(['default', 'premium', 'modern'])],
+            'portal_template' => ['required', 'string', Rule::in(['classic', 'modern', 'minimal', 'vibrant', 'eco', 'royal', 'corporate', 'dark', 'gradient', 'glass', 'compact', 'simple'])],
             'is_active' => ['required', 'boolean'],
             'password_length' => ['required', 'integer', 'min:6', 'max:32'],
             'subscription_plan_id' => ['required', 'exists:subscription_plans,id'],
@@ -212,7 +228,7 @@ class VillageController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($village->logo) {
-                Storage::disk('public')->delete($village->logo);
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($village->logo);
             }
             $village->logo = $request->file('logo')->store('logos', 'public');
         }
