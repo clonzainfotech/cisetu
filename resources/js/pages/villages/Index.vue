@@ -16,6 +16,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Pagination from '@/components/Pagination.vue';
 import debounce from 'lodash/debounce';
@@ -117,7 +124,23 @@ const form = useForm({
 });
 
 const isSubdomainTouched = ref(false);
+const portalTemplates = [
+    { id: 'classic', name: 'Classic', desc: 'Traditional & trusted.', color: 'bg-slate-500' },
+    { id: 'modern', name: 'Modern', desc: 'Clean & spacious.', color: 'bg-blue-600' },
+    { id: 'minimal', name: 'Minimal', desc: 'Simple & fast.', color: 'bg-zinc-400' },
+    { id: 'vibrant', name: 'Vibrant', desc: 'Bright & energetic.', color: 'bg-orange-500' },
+    { id: 'eco', name: 'Eco', desc: 'Green & organic.', color: 'bg-emerald-600' },
+    { id: 'royal', name: 'Royal', desc: 'Elegant & premium.', color: 'bg-amber-700' },
+    { id: 'corporate', name: 'Corporate', desc: 'Professional & formal.', color: 'bg-indigo-900' },
+    { id: 'dark', name: 'Dark', desc: 'Sleek & high-contrast.', color: 'bg-zinc-900' },
+    { id: 'gradient', name: 'Gradient', desc: 'Modern & colorful.', color: 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500' },
+    { id: 'glass', name: 'Glass', desc: 'Blur & transparency.', color: 'bg-sky-400' },
+    { id: 'compact', name: 'Compact', desc: 'Dense & efficient.', color: 'bg-teal-700' },
+    { id: 'simple', name: 'Simple', desc: 'Easy & accessible.', color: 'bg-slate-200' },
+];
+
 const isAdminNameTouched = ref(false);
+const showPreview = ref(false);
 const isAdminEmailTouched = ref(false);
 const isTransliterating = ref(false);
 const isLogoTouched = ref(false);
@@ -132,6 +155,10 @@ const generateRandomPassword = (length: number = 16): string => {
         retVal += charset[buf[i] % charset.length];
     }
     return retVal;
+};
+
+const openFullPreview = (template: string) => {
+    window.open(`/template-preview/${template}`, '_blank');
 };
 
 const logoPreviewUrl = computed(() => {
@@ -739,27 +766,50 @@ onMounted(() => {
                         </div>
 
                         <div class="grid gap-2 border-t pt-4 mt-2">
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Perspective Layout</div>
                             <Label>Website Template</Label>
                             <Select v-model="form.portal_template">
                                 <SelectTrigger :error="form.errors.portal_template">
                                     <SelectValue placeholder="Select perspective" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="classic">Classic Perspective</SelectItem>
-                                    <SelectItem value="modern">Modern Perspective</SelectItem>
-                                    <SelectItem value="minimal">Minimal Perspective</SelectItem>
-                                    <SelectItem value="vibrant">Vibrant Perspective</SelectItem>
-                                    <SelectItem value="eco">Eco Perspective</SelectItem>
-                                    <SelectItem value="royal">Royal Perspective</SelectItem>
-                                    <SelectItem value="corporate">Corporate Perspective</SelectItem>
-                                    <SelectItem value="dark">Dark Perspective</SelectItem>
-                                    <SelectItem value="gradient">Gradient Perspective</SelectItem>
-                                    <SelectItem value="glass">Glass Perspective</SelectItem>
-                                    <SelectItem value="compact">Compact Perspective</SelectItem>
-                                    <SelectItem value="simple">Simple Perspective</SelectItem>
+                                    <SelectItem v-for="t in portalTemplates" :key="t.id" :value="t.id">
+                                        <div class="flex items-center gap-2">
+                                            <div :class="['h-3 w-3 rounded-full', t.color]"></div>
+                                            <span>{{ t.name }} Perspective</span>
+                                        </div>
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
+
+                            <!-- Direct Live Preview -->
+                            <div v-if="form.portal_template" class="mt-2 group relative">
+                                <div class="rounded-lg border bg-muted/10 overflow-hidden aspect-video relative shadow-inner">
+                                    <iframe 
+                                        :key="form.portal_template"
+                                        :src="`/template-preview/${form.portal_template}`" 
+                                        class="w-full h-full border-none scale-[0.3] origin-top-left"
+                                        style="width: 333%; height: 333%;"
+                                    ></iframe>
+                                    <div class="absolute inset-0 bg-transparent z-10"></div>
+                                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                        <Button 
+                                            type="button"
+                                            variant="secondary" 
+                                            size="xs" 
+                                            class="h-6 text-[9px] font-bold shadow-sm"
+                                            @click="openFullPreview(form.portal_template)"
+                                        >
+                                            <ExternalLink class="h-3 w-3 mr-1" /> FULL VIEW
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div class="mt-1 flex items-center justify-between px-1">
+                                    <span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                                        <div class="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div>
+                                        Live Preview: {{ portalTemplates.find(t => t.id === form.portal_template)?.name }}
+                                    </span>
+                                </div>
+                            </div>
                             <InputError :message="form.errors.portal_template" />
                         </div>
 
@@ -897,7 +947,7 @@ onMounted(() => {
                             <InputError :message="form.errors.password_length" />
                         </div>
 
-                        <div class="pt-4 sticky bottom-0 bg-background pb-2 border-t mt-4">
+                        <div class="pt-4 pb-2 border-t mt-4">
                             <Button type="submit" :disabled="form.processing" class="w-full bg-[#134e4a] hover:bg-[#0e5d6a] h-12 text-sm font-bold uppercase tracking-widest shadow-lg">
                                 {{ editingVillage ? 'Save Node Configuration' : 'Deploy Virtual Village' }}
                             </Button>

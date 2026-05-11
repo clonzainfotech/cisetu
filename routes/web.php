@@ -13,6 +13,7 @@ use App\Http\Controllers\Users\ManagedUserController;
 use App\Http\Controllers\VillagePortalController;
 use App\Http\Controllers\Villages\HomeController;
 use App\Http\Controllers\Villages\ShopController;
+use App\Http\Controllers\Villages\TemplatePreviewController;
 use App\Http\Controllers\Villages\VillageController;
 use App\Http\Controllers\Villages\VillageSearchController;
 use App\Models\SubscriptionPlan;
@@ -73,6 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('villages/{village}/edit', [VillageController::class, 'edit'])->name('villages.edit');
     Route::post('villages/{village}', [VillageController::class, 'update'])->name('villages.update');
     Route::delete('villages/{village}', [VillageController::class, 'destroy'])->name('villages.destroy');
+    Route::get('template-preview/{template}', [TemplatePreviewController::class, 'show'])->name('template.preview');
 
     Route::get('states', [StateController::class, 'index'])->name('states.index');
     Route::post('states', [StateController::class, 'store'])->name('states.store');
