@@ -20,6 +20,41 @@ const chatbotConfig = ref<any>(null);
 const isTyping = ref(false);
 const isPlanDropdownOpen = ref(false);
 
+const districtSearch = ref('');
+const districtSuggestions = ref<{id: number, name_en: string}[]>([]);
+const isDistrictDropdownOpen = ref(false);
+const districtLoading = ref(false);
+let districtTimeout: any = null;
+
+const handleDistrictInput = () => {
+    clearTimeout(districtTimeout);
+    form.district_name = districtSearch.value;
+    isDistrictDropdownOpen.value = true;
+    
+    if (districtSearch.value.length < 2) {
+        districtSuggestions.value = [];
+        return;
+    }
+    
+    districtLoading.value = true;
+    districtTimeout = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/districts/search?q=${encodeURIComponent(districtSearch.value)}`);
+            districtSuggestions.value = await res.json();
+        } catch (e) {
+            console.error('Failed to load districts', e);
+        } finally {
+            districtLoading.value = false;
+        }
+    }, 300);
+};
+
+const selectDistrict = (name: string) => {
+    districtSearch.value = name;
+    form.district_name = name;
+    isDistrictDropdownOpen.value = false;
+};
+
 const selectedPlanLabel = computed(() => {
     const p = props.plans.find(p => p.id === form.plan_id);
     return p ? `${p.name} — ₹${Math.floor(p.price_per_year_inr).toLocaleString()}` : 'Select a plan';
@@ -150,6 +185,9 @@ const closeDropdowns = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (!target.closest('.custom-select')) {
         isPlanDropdownOpen.value = false;
+    }
+    if (!target.closest('.district-group')) {
+        isDistrictDropdownOpen.value = false;
     }
 };
 
@@ -628,9 +666,30 @@ const getPlanFeatures = (plan: any) => {
                                 <input v-model="form.village_name" type="text" placeholder="Village name" :class="{ 'err-field': form.errors.village_name }">
                                 <span v-if="form.errors.village_name" class="err">{{ form.errors.village_name }}</span>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group district-group custom-select relative" @click.stop="isDistrictDropdownOpen = true">
                                 <label>District</label>
-                                <input v-model="form.district_name" type="text" placeholder="District name" :class="{ 'err-field': form.errors.district_name }">
+                                <input v-model="districtSearch" @input="handleDistrictInput" type="text" placeholder="Search district name" :class="{ 'err-field': form.errors.district_name }" autocomplete="off">
+                                
+                                <div class="select-options-wrap" :class="{ show: isDistrictDropdownOpen && districtSearch.length >= 2 }">
+                                    <div v-if="districtLoading" class="select-opt">
+                                        <div class="opt-main">
+                                            <span class="opt-name" style="color: rgba(255,255,255,0.5); font-style: italic;">Searching...</span>
+                                        </div>
+                                    </div>
+                                    <template v-else>
+                                        <div v-for="dist in districtSuggestions" :key="dist.id" class="select-opt" @click.stop="selectDistrict(dist.name_en)">
+                                            <div class="opt-main">
+                                                <div class="opt-dot"></div>
+                                                <span class="opt-name">{{ dist.name_en }}</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="districtSuggestions.length === 0" class="select-opt">
+                                            <div class="opt-main">
+                                                <span class="opt-name" style="color: rgba(255,255,255,0.5); font-style: italic;">No districts found</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                                 <span v-if="form.errors.district_name" class="err">{{ form.errors.district_name }}</span>
                             </div>
                             <div class="form-group">
@@ -962,7 +1021,7 @@ nav.scrolled {
 }
 
 @media(max-width:900px) {
-    .nav-links, .btn-ghost-nav { display: none; }
+    .nav-links, .btn-ghost-nav, .nav-right .btn-nav-primary { display: none; }
     .hamburger { display: flex; }
 }
 
@@ -1334,6 +1393,12 @@ nav.scrolled {
     text-transform: uppercase;
 }
 .section-tag::before { content: ''; width: 20px; height: 2px; background: linear-gradient(90deg, var(--green2), var(--green)); border-radius: 2px; }
+
+/* Override section tag color on dark backgrounds */
+.impact-section .section-tag,
+.cta-card .section-tag {
+    color: rgba(255, 255, 255, 0.85);
+}
 .section-title {
     font-family: 'Fraunces', serif;
     font-size: clamp(2rem, 4vw, 3.2rem);

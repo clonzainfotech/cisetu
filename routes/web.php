@@ -52,6 +52,22 @@ Route::post('/inquiries', [PublicInquiryController::class, 'store'])->name('inqu
 Route::get('api/payment', [GuestPaymentApiController::class, 'payment']);
 Route::get('api/villages/search', VillageSearchController::class)->middleware('auth');
 
+Route::get('api/districts/search', function (Request $request) {
+    $search = $request->query('q');
+    
+    $districts = \App\Models\District::query()
+        ->where('is_active', true)
+        ->when($search, function($query, $search) {
+            $query->where('name_en', 'like', "%{$search}%")
+                  ->orWhere('name_local', 'like', "%{$search}%");
+        })
+        ->orderBy('name_en')
+        ->limit(15)
+        ->get(['id', 'name_en']);
+        
+    return response()->json($districts);
+})->name('api.districts.search');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('contact-us', [ContactController::class, 'index'])->name('contact-us');
