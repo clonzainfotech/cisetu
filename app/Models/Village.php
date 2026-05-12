@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'is_active',
     'portal_template',
     'password_length',
+    'api_token',
 ])]
 class Village extends Model
 {

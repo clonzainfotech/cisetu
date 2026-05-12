@@ -50,6 +50,10 @@ Route::get('/contact', [PublicInquiryController::class, 'index'])->name('contact
 Route::post('/inquiries', [PublicInquiryController::class, 'store'])->name('inquiries.store');
 
 Route::get('api/payment', [GuestPaymentApiController::class, 'payment']);
+Route::get('api/v1/details', [\App\Http\Controllers\Api\VillageDataApiController::class, 'getDetails']);
+Route::get('api/v1/shops', [\App\Http\Controllers\Api\VillageDataApiController::class, 'shops']);
+Route::get('api/v1/homes', [\App\Http\Controllers\Api\VillageDataApiController::class, 'homes']);
+
 Route::get('api/villages/search', VillageSearchController::class)->middleware('auth');
 
 Route::get('api/districts/search', function (Request $request) {
@@ -90,6 +94,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('villages/{village}/edit', [VillageController::class, 'edit'])->name('villages.edit');
     Route::post('villages/{village}', [VillageController::class, 'update'])->name('villages.update');
     Route::delete('villages/{village}', [VillageController::class, 'destroy'])->name('villages.destroy');
+    Route::post('villages/{village}/regenerate-token', [VillageController::class, 'regenerateToken'])->name('villages.regenerate-token');
     Route::get('template-preview/{template}', [TemplatePreviewController::class, 'show'])->name('template.preview');
 
     Route::get('states', [StateController::class, 'index'])->name('states.index');

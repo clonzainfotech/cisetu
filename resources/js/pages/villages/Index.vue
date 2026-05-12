@@ -26,10 +26,10 @@ import {
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Pagination from '@/components/Pagination.vue';
 import debounce from 'lodash/debounce';
-import { Pencil, Trash2, Search, UserPlus, ExternalLink, Copy, Building2, CheckCircle2, Clock, XCircle, Globe, Languages, RefreshCw, Palette } from 'lucide-vue-next';
+import { Pencil, Trash2, Search, UserPlus, ExternalLink, Copy, Building2, CheckCircle2, Clock, XCircle, Globe, Languages, RefreshCw, Palette, Key, Terminal } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import { dashboard } from '@/routes';
-import { index as indexVillages, store as storeVillage, update as updateVillage, destroy as destroyVillage } from '@/routes/villages';
+import { index as indexVillages, store as storeVillage, update as updateVillage, destroy as destroyVillage, regenerateToken as regenerateVillageToken } from '@/routes/villages';
 
 import { computed, ref, watch, onMounted } from 'vue';
 
@@ -48,11 +48,9 @@ type Props = {
             subscription_status?: string;
             is_active: boolean;
             admin_email: string | null;
+            password_length: number;
+            api_token: string | null;
             district: { id: number; name_en: string; state: { id: number; name_en: string } };
-            portal_template: string;
-            subscription_plan_id: number | null;
-            subscription_start_at: string | null;
-            subscription_expires_at: string | null;
         }>;
         links: Array<any>;
         total: number;
@@ -83,7 +81,82 @@ const updateList = debounce(() => {
 watch([search, limit], () => updateList());
 
 const editingVillage = ref<Props['villages']['data'][0] | null>(null);
+const managingApiVillageId = ref<number | null>(null);
+
+const activeVillage = computed(() => {
+    const id = managingApiVillageId.value || editingVillage.value?.id;
+    if (!id) return null;
+    return props.villages.data.find(v => v.id === id) || (managingApiVillageId.value ? null : editingVillage.value);
+});
+
 const deleteVillage = ref<Props['villages']['data'][0] | null>(null);
+const isRegenerating = ref(false);
+const showToken = ref(false);
+const copyTarget = ref<HTMLTextAreaElement | null>(null);
+
+const handleRegenerateToken = () => {
+    if (!activeVillage.value) return;
+    
+    if (confirm('Are you sure you want to regenerate this token? Any existing integrations will stop working immediately.')) {
+        isRegenerating.value = true;
+        router.post(regenerateVillageToken(activeVillage.value.id).url, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                toast.success('Security token updated successfully');
+            },
+            onFinish: () => {
+                isRegenerating.value = false;
+            }
+        });
+    }
+};
+
+const copyToClipboard = (text: string | null, message: string) => {
+    if (!text || String(text).toLowerCase() === 'null' || String(text).toLowerCase() === 'undefined') {
+        toast.error('Error: Data is missing (null)');
+        return;
+    }
+
+    const cleanText = String(text).trim();
+
+    // Try modern API
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(cleanText).then(() => {
+            toast.success(`${message} (${cleanText.substring(0, 5)}...)`);
+        }).catch(() => {
+            performFallbackCopy(cleanText, message);
+        });
+    } else {
+        performFallbackCopy(cleanText, message);
+    }
+};
+
+const performFallbackCopy = (text: string, message: string) => {
+    let successful = false;
+    try {
+        const el = copyTarget.value;
+        if (!el) throw new Error('Copy target missing');
+        
+        el.value = text;
+        el.style.display = 'block'; // Ensure it's not hidden for the moment
+        el.focus();
+        el.select();
+        el.setSelectionRange(0, 99999);
+        
+        successful = document.execCommand('copy');
+        el.style.display = 'none';
+    } catch (err) {
+        successful = false;
+    }
+
+    if (successful) {
+        toast.success(`${message} (${text.substring(0, 5)}...)`);
+    } else {
+        window.prompt("Manual Copy Required:", text);
+    }
+};
+
 const isDeleteOpen = ref(false);
 
 const openInNewTab = (subdomain: string) => {
@@ -97,9 +170,7 @@ const copyCredentials = (v: Props['villages']['data'][0]) => {
 Website: https://${v.subdomain}.${domain}
 Admin Email: ${v.admin_email || 'Not set'}`;
 
-    navigator.clipboard.writeText(text).then(() => {
-        toast.success('Village details copied');
-    });
+    copyToClipboard(text, 'Village details copied');
 };
 
 const form = useForm({
@@ -541,6 +612,9 @@ onMounted(() => {
                                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="copyCredentials(v)">
                                         <Copy class="h-4 w-4" />
                                     </Button>
+                                    <Button v-if="$page.props.auth.user.is_super_master_admin || $page.props.auth.user.role === 'super_master_admin'" variant="ghost" size="icon" class="h-8 w-8 text-blue-600" title="API Access" @click="managingApiVillageId = v.id">
+                                        <Terminal class="h-4 w-4" />
+                                    </Button>
                                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="editVillage(v)">
                                         <Pencil class="h-4 w-4" />
                                     </Button>
@@ -927,9 +1001,8 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <!-- Edit Mode Security Setting -->
-                        <div v-if="editingVillage" class="grid gap-2 border-t pt-4 mt-2">
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Security Configuration</div>
+                        <!-- Security Configuration (Super Master Admin Only) -->
+                        <div v-if="activeVillage && !managingApiVillageId && ($page.props.auth.user.is_super_master_admin || $page.props.auth.user.role === 'super_master_admin')" class="grid gap-2 border-t pt-4 mt-2">
                             <Label for="password_length">Admin Password Length Requirement</Label>
                             <div class="flex items-center gap-4">
                                 <Input
@@ -966,5 +1039,132 @@ onMounted(() => {
             @update:open="isDeleteOpen = $event"
             @confirm="doDelete"
         />
+
+        <!-- API ACCESS MODAL -->
+        <Dialog :open="!!managingApiVillageId" @update:open="(val) => !val && (managingApiVillageId = null)">
+            <DialogContent class="sm:max-w-xl p-0 overflow-hidden border-none shadow-2xl">
+                <div class="bg-white dark:bg-zinc-950">
+                    <!-- Global Theme Header -->
+                    <div class="bg-[#134e4a] p-6 text-white">
+                        <div class="flex items-center gap-4">
+                            <div class="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
+                                <Terminal class="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold tracking-tight">{{ activeVillage?.name_en }}</h2>
+                                <p class="text-emerald-100/70 text-[10px] font-black uppercase tracking-[0.2em]">API INFRASTRUCTURE GATEWAY</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="activeVillage" class="p-6 space-y-6">
+                        <!-- Token Section -->
+                        <div class="rounded-2xl border bg-zinc-50/50 dark:bg-zinc-900/30 p-5 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 w-2 rounded-full" :class="activeVillage.api_token ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'"></div>
+                                    <Label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Master Data Token</Label>
+                                </div>
+                                <span v-if="activeVillage.api_token" class="text-[8px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded border border-emerald-500/20 uppercase">Encrypted</span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex-1 group">
+                                    <Input
+                                        type="text"
+                                        :value="activeVillage.api_token || 'Token not found...'"
+                                        readonly
+                                        @click="(e) => (e.target as HTMLInputElement).select()"
+                                        class="h-11 font-mono bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 text-[13px] focus:ring-2 focus:ring-emerald-500 pr-10 overflow-ellipsis cursor-copy transition-all group-hover:bg-emerald-50/50"
+                                    />
+                                    <div class="absolute right-3 top-3.5">
+                                        <div class="h-4 w-4 rounded-full bg-emerald-500 animate-pulse border-2 border-white shadow-sm"></div>
+                                    </div>
+                                </div>
+                                <Button 
+                                    v-if="activeVillage.api_token"
+                                    variant="outline" 
+                                    class="h-11 px-4 border-zinc-200 hover:bg-zinc-100"
+                                    @click="copyToClipboard(activeVillage.api_token, 'API Token copied')"
+                                >
+                                    <Copy class="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    class="h-11 px-4 border-[#134e4a] text-[#134e4a] hover:bg-emerald-50 font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                                    :disabled="isRegenerating"
+                                    @click="handleRegenerateToken"
+                                >
+                                    <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isRegenerating }" /> 
+                                    {{ activeVillage.api_token ? 'REFRESH' : 'GENERATE' }}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <!-- Playground / API Documentation -->
+                        <div v-if="activeVillage.api_token" class="space-y-4 animate-in fade-in duration-700">
+                            <div class="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <div class="h-px flex-1 bg-zinc-100"></div>
+                                DEVELOPER PLAYGROUND
+                                <div class="h-px flex-1 bg-zinc-100"></div>
+                            </div>
+
+                            <div class="grid gap-3">
+                                <!-- Details Endpoint -->
+                                <div class="p-4 rounded-xl border border-zinc-100 bg-zinc-50/30 hover:border-emerald-200 transition-colors">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">GET</span>
+                                            <span class="text-[11px] font-bold text-zinc-700">Dynamic Details Search</span>
+                                        </div>
+                                        <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
+                                            const token = activeVillage?.api_token;
+                                            if (token) {
+                                                const url = `${$page.props.app_url}/api/v1/details?receipt=YOUR_NO&token=${token}`;
+                                                copyToClipboard(url, 'Test URL copied');
+                                            }
+                                        }">COPY LINK</Button>
+                                    </div>
+                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ $page.props.app_url }}/api/v1/details?receipt=...&token={{ activeVillage.api_token.substring(0, 8) }}...</p>
+                                </div>
+
+                                <!-- Shops Endpoint -->
+                                <div class="p-4 rounded-xl border border-zinc-100 bg-zinc-50/30 hover:border-emerald-200 transition-colors">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">GET</span>
+                                            <span class="text-[11px] font-bold text-zinc-700">Shops Master List</span>
+                                        </div>
+                                        <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
+                                            const token = activeVillage?.api_token;
+                                            if (token) {
+                                                const url = `${$page.props.app_url}/api/v1/shops?token=${token}`;
+                                                copyToClipboard(url, 'Shops URL copied');
+                                            }
+                                        }">COPY LINK</Button>
+                                    </div>
+                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ $page.props.app_url }}/api/v1/shops?token={{ activeVillage.api_token.substring(0, 8) }}...</p>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-100">
+                                <p class="text-[10px] text-amber-800 leading-relaxed font-medium">
+                                    <strong>Production Recommendation:</strong> Always use the <code class="px-1.5 py-0.5 bg-amber-100 rounded font-bold">X-Village-Token</code> header for actual API integrations to keep the token out of server logs.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Internal Copy Target (Inside focus trap) -->
+                <textarea
+                    ref="copyTarget"
+                    class="absolute -left-[9999px] top-0 h-0 w-0 opacity-0"
+                    readonly
+                    aria-hidden="true"
+                ></textarea>
+            </DialogContent>
+        </Dialog>
+        
     </div>
 </template>

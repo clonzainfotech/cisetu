@@ -63,6 +63,7 @@ class VillageController extends Controller
                 'admin_email' => $village->users()->where('role', 'village_admin')->first()?->email,
                 'portal_template' => $village->portal_template,
                 'password_length' => $village->password_length,
+                'api_token' => $village->api_token,
                 'subscription_plan_id' => $village->subscription_plan_id,
                 'subscription_start_at' => $village->subscription_start_at?->toDateString(),
                 'subscription_expires_at' => $village->subscription_expires_at?->toDateString(),
@@ -238,6 +239,21 @@ class VillageController extends Controller
         return redirect()->route('villages.index')->with('toast', [
             'type' => 'success',
             'message' => 'Village updated successfully',
+        ]);
+    }
+
+    public function regenerateToken(Village $village): RedirectResponse
+    {
+        /** @var User $actor */
+        $actor = auth()->user();
+        abort_unless($actor->isSuperMasterAdmin(), 403);
+
+        $village->api_token = \Illuminate\Support\Str::random(60);
+        $village->save();
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'API Token regenerated successfully',
         ]);
     }
 
