@@ -16,13 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Pagination from '@/components/Pagination.vue';
 import debounce from 'lodash/debounce';
@@ -82,11 +76,49 @@ watch([search, limit], () => updateList());
 
 const editingVillage = ref<Props['villages']['data'][0] | null>(null);
 const managingApiVillageId = ref<number | null>(null);
+const isApiTerminalOpen = ref(false);
+
+const openApiTerminal = (v: Props['villages']['data'][0]) => {
+    managingApiVillageId.value = v.id;
+    showToken.value = false;
+    isApiTerminalOpen.value = true;
+};
 
 const activeVillage = computed(() => {
-    const id = managingApiVillageId.value || editingVillage.value?.id;
+    const id = managingApiVillageId.value;
     if (!id) return null;
-    return props.villages.data.find(v => v.id === id) || (managingApiVillageId.value ? null : editingVillage.value);
+    
+    return props.villages.data.find(v => String(v.id) === String(id)) || null;
+});
+
+const page = usePage();
+
+const appUrlHost = computed(() => String(page.props.app_url ?? '').replace(/^https?:\/\//, ''));
+
+const detailsApiExampleUrl = computed(() => {
+    const v = activeVillage.value;
+    if (!v?.api_token) {
+        return '';
+    }
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'https:';
+
+    return `${protocol}//${v.subdomain}.${appUrlHost.value}/api/v1/details?receipt=YOUR_NO&token=${v.api_token}`;
+});
+
+const shopsApiExampleUrl = computed(() => {
+    const v = activeVillage.value;
+    if (!v?.api_token) {
+        return '';
+    }
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'https:';
+
+    return `${protocol}//${v.subdomain}.${appUrlHost.value}/api/v1/shops?token=${v.api_token}`;
+});
+
+watch(isApiTerminalOpen, (open) => {
+    if (! open) {
+        managingApiVillageId.value = null;
+    }
 });
 
 const deleteVillage = ref<Props['villages']['data'][0] | null>(null);
@@ -615,9 +647,14 @@ onMounted(() => {
                                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="copyCredentials(v)">
                                         <Copy class="h-4 w-4" />
                                     </Button>
-                                    <Button v-if="$page.props.auth.user.is_super_master_admin || $page.props.auth.user.role === 'super_master_admin'" variant="ghost" size="icon" class="h-8 w-8 text-blue-600" title="API Access" @click="managingApiVillageId = v.id">
+                                    <button
+                                        type="button"
+                                        class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="API Access"
+                                        @click.stop="openApiTerminal(v)"
+                                    >
                                         <Terminal class="h-4 w-4" />
-                                    </Button>
+                                    </button>
                                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="editVillage(v)">
                                         <Pencil class="h-4 w-4" />
                                     </Button>
@@ -1005,7 +1042,10 @@ onMounted(() => {
                         </div>
 
                         <!-- Security Configuration (Super Master Admin Only) -->
-                        <div v-if="activeVillage && !managingApiVillageId && ($page.props.auth.user.is_super_master_admin || $page.props.auth.user.role === 'super_master_admin')" class="grid gap-2 border-t pt-4 mt-2">
+                        <div
+                            v-if="activeVillage && !managingApiVillageId && $page.props.auth?.user && ($page.props.auth.user.is_super_master_admin || $page.props.auth.user.role === 'super_master_admin')"
+                            class="grid gap-2 border-t pt-4 mt-2"
+                        >
                             <Label for="password_length">Admin Password Length Requirement</Label>
                             <div class="flex items-center gap-4">
                                 <Input
@@ -1043,10 +1083,24 @@ onMounted(() => {
             @confirm="doDelete"
         />
 
-        <!-- API ACCESS MODAL -->
-        <Dialog :open="!!managingApiVillageId" @update:open="(val) => !val && (managingApiVillageId = null)">
-            <DialogContent class="sm:max-w-xl p-0 overflow-hidden border-none shadow-2xl">
-                <div class="bg-white dark:bg-zinc-950">
+        <Dialog v-model:open="isApiTerminalOpen">
+            <DialogContent
+                :show-close-button="false"
+                class="max-h-[90vh] max-w-xl w-[calc(100%-2rem)] gap-0 overflow-y-auto overflow-x-hidden rounded-2xl border-0 p-0 shadow-2xl sm:max-w-xl"
+            >
+                <DialogTitle class="sr-only">
+                    {{ activeVillage ? `API access — ${activeVillage.name_en}` : 'API access' }}
+                </DialogTitle>
+
+                <button
+                    type="button"
+                    class="absolute right-4 top-4 z-20 p-2 text-white/50 hover:text-white transition-colors"
+                    @click="isApiTerminalOpen = false"
+                >
+                    <XCircle class="h-6 w-6" />
+                </button>
+
+                <div v-if="activeVillage" class="flex flex-col">
                     <!-- Global Theme Header -->
                     <div class="bg-[#134e4a] p-6 text-white">
                         <div class="flex items-center gap-4">
@@ -1060,15 +1114,15 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div v-if="activeVillage" class="p-6 space-y-6">
+                    <div class="p-6 space-y-6 max-h-[85vh] overflow-y-auto">
                         <!-- Token Section -->
                         <div class="rounded-2xl border bg-zinc-50/50 dark:bg-zinc-900/30 p-5 space-y-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <div class="h-2 w-2 rounded-full" :class="activeVillage.api_token ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'"></div>
+                                    <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
                                     <Label class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Master Data Token</Label>
                                 </div>
-                                <span v-if="activeVillage.api_token" class="text-[8px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded border border-emerald-500/20 uppercase">Encrypted</span>
+                                <span class="text-[8px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded border border-emerald-500/20 uppercase">Encrypted</span>
                             </div>
 
                             <div class="flex items-center gap-2">
@@ -1084,21 +1138,21 @@ onMounted(() => {
                                         <div class="h-4 w-4 rounded-full bg-emerald-500 animate-pulse border-2 border-white shadow-sm"></div>
                                     </div>
                                 </div>
-                                <Button 
+                                <Button
                                     v-if="activeVillage.api_token"
-                                    variant="outline" 
+                                    variant="outline"
                                     class="h-11 px-4 border-zinc-200 hover:bg-zinc-100"
                                     @click="copyToClipboard(activeVillage.api_token, 'API Token copied')"
                                 >
                                     <Copy class="h-4 w-4" />
                                 </Button>
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     class="h-11 px-4 border-[#134e4a] text-[#134e4a] hover:bg-emerald-50 font-bold text-xs uppercase tracking-widest disabled:opacity-50"
                                     :disabled="isRegenerating"
                                     @click="handleRegenerateToken"
                                 >
-                                    <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isRegenerating }" /> 
+                                    <RefreshCw class="h-4 w-4 mr-2" :class="{ 'animate-spin': isRegenerating }" />
                                     {{ activeVillage.api_token ? 'REFRESH' : 'GENERATE' }}
                                 </Button>
                             </div>
@@ -1120,17 +1174,27 @@ onMounted(() => {
                                             <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">GET</span>
                                             <span class="text-[11px] font-bold text-zinc-700">Dynamic Details Search</span>
                                         </div>
-                                        <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
-                                            const token = activeVillage?.api_token;
-                                            if (token) {
-                                                const protocol = window.location.protocol;
-                                                const domain = $page.props.app_url.replace(/^https?:\/\//, '');
-                                                const url = `${protocol}//${activeVillage.subdomain}.${domain}/api/v1/details?receipt=YOUR_NO&token=${token}`;
-                                                copyToClipboard(url, 'Test URL copied');
-                                            }
-                                        }">COPY LINK</Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="xs"
+                                            class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50"
+                                            @click="() => {
+                                                const url = detailsApiExampleUrl;
+                                                if (url) {
+                                                    copyToClipboard(url, 'Test URL copied');
+                                                }
+                                            }"
+                                        >COPY LINK</Button>
                                     </div>
-                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ activeVillage.subdomain }}.{{ $page.props.app_url.replace(/^https?:\/\//, '') }}/api/v1/details...</p>
+                                    <div class="space-y-1">
+                                        <Input
+                                            type="text"
+                                            readonly
+                                            :value="detailsApiExampleUrl"
+                                            @click="(e) => (e.target as HTMLInputElement).select()"
+                                            class="h-8 text-[10px] font-mono bg-white dark:bg-black border-zinc-100 text-zinc-500 focus:ring-1 focus:ring-emerald-500 cursor-copy"
+                                        />
+                                    </div>
                                 </div>
 
                                 <!-- Shops Endpoint -->
@@ -1140,17 +1204,27 @@ onMounted(() => {
                                             <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">GET</span>
                                             <span class="text-[11px] font-bold text-zinc-700">Shops Master List</span>
                                         </div>
-                                        <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
-                                            const token = activeVillage?.api_token;
-                                            if (token) {
-                                                const protocol = window.location.protocol;
-                                                const domain = $page.props.app_url.replace(/^https?:\/\//, '');
-                                                const url = `${protocol}//${activeVillage.subdomain}.${domain}/api/v1/shops?token=${token}`;
-                                                copyToClipboard(url, 'Shops URL copied');
-                                            }
-                                        }">COPY LINK</Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="xs"
+                                            class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50"
+                                            @click="() => {
+                                                const url = shopsApiExampleUrl;
+                                                if (url) {
+                                                    copyToClipboard(url, 'Shops URL copied');
+                                                }
+                                            }"
+                                        >COPY LINK</Button>
                                     </div>
-                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ activeVillage.subdomain }}.{{ $page.props.app_url.replace(/^https?:\/\//, '') }}/api/v1/shops...</p>
+                                    <div class="space-y-1">
+                                        <Input
+                                            type="text"
+                                            readonly
+                                            :value="shopsApiExampleUrl"
+                                            @click="(e) => (e.target as HTMLInputElement).select()"
+                                            class="h-8 text-[10px] font-mono bg-white dark:bg-black border-zinc-100 text-zinc-500 focus:ring-1 focus:ring-emerald-500 cursor-copy"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -1164,6 +1238,5 @@ onMounted(() => {
                 </div>
             </DialogContent>
         </Dialog>
-        
     </div>
 </template>
