@@ -92,7 +92,6 @@ const activeVillage = computed(() => {
 const deleteVillage = ref<Props['villages']['data'][0] | null>(null);
 const isRegenerating = ref(false);
 const showToken = ref(false);
-const copyTarget = ref<HTMLTextAreaElement | null>(null);
 
 const handleRegenerateToken = () => {
     if (!activeVillage.value) return;
@@ -113,47 +112,51 @@ const handleRegenerateToken = () => {
 };
 
 const copyToClipboard = (text: string | null, message: string) => {
-    if (!text || String(text).toLowerCase() === 'null' || String(text).toLowerCase() === 'undefined') {
-        toast.error('Error: Data is missing (null)');
+    if (!text || String(text).toLowerCase() === 'null') {
+        toast.error('Error: Data is missing');
         return;
     }
 
     const cleanText = String(text).trim();
 
-    // Try modern API
+    // Try modern API first (for HTTPS)
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(cleanText).then(() => {
-            toast.success(`${message} (${cleanText.substring(0, 5)}...)`);
+            toast.success(message);
         }).catch(() => {
-            performFallbackCopy(cleanText, message);
+            // If modern fails, the user can still use the click-to-select feature
+            toast.info('Please click the token to select and press Cmd+C');
         });
     } else {
-        performFallbackCopy(cleanText, message);
-    }
-};
-
-const performFallbackCopy = (text: string, message: string) => {
-    let successful = false;
-    try {
-        const el = copyTarget.value;
-        if (!el) throw new Error('Copy target missing');
+        // For HTTP: We highlight the text and try to copy it. 
+        // If it fails, the user already has the text selected to manual copy.
+        const toastId = toast.info('Copying...', { duration: 1000 });
         
-        el.value = text;
-        el.style.display = 'block'; // Ensure it's not hidden for the moment
-        el.focus();
-        el.select();
-        el.setSelectionRange(0, 99999);
-        
-        successful = document.execCommand('copy');
-        el.style.display = 'none';
-    } catch (err) {
-        successful = false;
-    }
-
-    if (successful) {
-        toast.success(`${message} (${text.substring(0, 5)}...)`);
-    } else {
-        window.prompt("Manual Copy Required:", text);
+        try {
+            // We use a temporary textarea because copying from a readonly input can be flaky in some browsers
+            const textArea = document.createElement("textarea");
+            textArea.value = cleanText;
+            textArea.style.position = "fixed";
+            textArea.style.left = "0";
+            textArea.style.top = "0";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                toast.dismiss(toastId);
+                toast.success(message);
+            } else {
+                throw new Error();
+            }
+        } catch (err) {
+            toast.dismiss(toastId);
+            toast.info('Click the token box & press Cmd+C');
+        }
     }
 };
 
@@ -1120,12 +1123,14 @@ onMounted(() => {
                                         <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
                                             const token = activeVillage?.api_token;
                                             if (token) {
-                                                const url = `${$page.props.app_url}/api/v1/details?receipt=YOUR_NO&token=${token}`;
+                                                const protocol = window.location.protocol;
+                                                const domain = $page.props.app_url.replace(/^https?:\/\//, '');
+                                                const url = `${protocol}//${activeVillage.subdomain}.${domain}/api/v1/details?receipt=YOUR_NO&token=${token}`;
                                                 copyToClipboard(url, 'Test URL copied');
                                             }
                                         }">COPY LINK</Button>
                                     </div>
-                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ $page.props.app_url }}/api/v1/details?receipt=...&token={{ activeVillage.api_token.substring(0, 8) }}...</p>
+                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ activeVillage.subdomain }}.{{ $page.props.app_url.replace(/^https?:\/\//, '') }}/api/v1/details...</p>
                                 </div>
 
                                 <!-- Shops Endpoint -->
@@ -1138,12 +1143,14 @@ onMounted(() => {
                                         <Button variant="ghost" size="xs" class="h-7 text-[9px] font-black text-[#134e4a] hover:bg-emerald-50" @click="() => {
                                             const token = activeVillage?.api_token;
                                             if (token) {
-                                                const url = `${$page.props.app_url}/api/v1/shops?token=${token}`;
+                                                const protocol = window.location.protocol;
+                                                const domain = $page.props.app_url.replace(/^https?:\/\//, '');
+                                                const url = `${protocol}//${activeVillage.subdomain}.${domain}/api/v1/shops?token=${token}`;
                                                 copyToClipboard(url, 'Shops URL copied');
                                             }
                                         }">COPY LINK</Button>
                                     </div>
-                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ $page.props.app_url }}/api/v1/shops?token={{ activeVillage.api_token.substring(0, 8) }}...</p>
+                                    <p class="text-[10px] font-mono text-zinc-400 truncate">{{ activeVillage.subdomain }}.{{ $page.props.app_url.replace(/^https?:\/\//, '') }}/api/v1/shops...</p>
                                 </div>
                             </div>
 
@@ -1155,14 +1162,6 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
-
-                <!-- Internal Copy Target (Inside focus trap) -->
-                <textarea
-                    ref="copyTarget"
-                    class="absolute -left-[9999px] top-0 h-0 w-0 opacity-0"
-                    readonly
-                    aria-hidden="true"
-                ></textarea>
             </DialogContent>
         </Dialog>
         
