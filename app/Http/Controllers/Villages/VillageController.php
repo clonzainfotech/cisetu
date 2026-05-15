@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -101,7 +102,7 @@ class VillageController extends Controller
         if ($request->isMethod('post') && empty($request->all()) && $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data')) {
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.'
+                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.',
             ]);
         }
 
@@ -178,7 +179,7 @@ class VillageController extends Controller
         if ($request->isMethod('post') && empty($request->all()) && $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data')) {
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.'
+                'message' => 'The uploaded file is too large for the server. Please use a file smaller than 2MB.',
             ]);
         }
 
@@ -217,7 +218,7 @@ class VillageController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($village->logo) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($village->logo);
+                Storage::disk('public')->delete($village->logo);
             }
             $village->logo = $request->file('logo')->store('logos', 'public');
         }
@@ -236,7 +237,7 @@ class VillageController extends Controller
         $actor = auth()->user();
         abort_unless($actor->isSuperMasterAdmin(), 403);
 
-        $village->api_token = \Illuminate\Support\Str::random(60);
+        $village->api_token = Str::random(60);
         $village->save();
 
         return back()->with('toast', [
@@ -245,7 +246,7 @@ class VillageController extends Controller
         ]);
     }
 
-    public function destroy(Village $village): RedirectResponse
+    public function destroy(Request $request, Village $village): RedirectResponse
     {
         /** @var User $actor */
         $actor = $request->user();
