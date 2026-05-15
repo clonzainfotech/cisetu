@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Villages;
 use App\Http\Controllers\Controller;
 use App\Models\Home;
 use App\Models\Village;
+use App\Services\Imports\HomeImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,7 +31,7 @@ class HomeController extends Controller
         }
 
         $search = $request->input('search');
-        $limit = $request->input('limit', 10);
+        $limit = $this->resolvePerPageLimit($request);
 
         $homes = Home::where('village_id', $village->id)
             ->when($search, function ($query, $search) {
@@ -44,7 +45,11 @@ class HomeController extends Controller
             })
             ->orderBy('property_no')
             ->paginate($limit)
-            ->withQueryString();
+            ->withQueryString()
+            ->appends(array_filter([
+                'search' => $search,
+                'limit' => $limit,
+            ], fn ($value) => $value !== null && $value !== ''));
 
         return Inertia::render('villages/homes/Index', [
             'homes' => $homes,
@@ -162,39 +167,37 @@ class HomeController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    public function import(Request $request): RedirectResponse
+    public function import(Request $request, HomeImportService $homeImportService): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt',
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:10240'],
+            'use_ai' => ['sometimes', 'boolean'],
         ]);
 
         $village = $request->get('village') ?: $request->user()->village;
-        $file = $request->file('file');
-        $handle = fopen($file->getRealPath(), 'r');
 
-        // Skip header
-        fgetcsv($handle);
+        $result = $homeImportService->import(
+            $village,
+            $request->file('file'),
+            $request->boolean('use_ai', true),
+        );
 
-        $count = 0;
-        while (($data = fgetcsv($handle)) !== false) {
-            if (count($data) < 6) {
-                continue;
-            }
-
-            Home::updateOrCreate(
-                ['village_id' => $village->id, 'property_no' => $data[0]],
-                [
-                    'house_no' => $data[1],
-                    'owner' => $data[2],
-                    'occupant' => $data[3],
-                    'address' => $data[4],
-                    'total' => (float) $data[5],
-                ]
-            );
-            $count++;
+        if ($result->imported === 0) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'No valid property rows found. Check the file format or enable AI mapping with OPENAI_API_KEY.',
+            ]);
         }
-        fclose($handle);
 
-        return back()->with('toast', ['type' => 'success', 'message' => "Successfully imported {$count} records."]);
+        $methodLabel = match ($result->method) {
+            'ai-full' => 'AI',
+            'ai-columns' => 'AI column mapping',
+            default => 'auto-detect',
+        };
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => "Successfully imported {$result->imported} properties ({$methodLabel}).",
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\InquiryManagementController;
 use App\Http\Controllers\Api\GuestPaymentApiController;
+use App\Http\Controllers\Api\VillageDataApiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Geography\DistrictController;
 use App\Http\Controllers\Geography\DistrictSearchController;
@@ -51,9 +52,9 @@ Route::get('/contact', [PublicInquiryController::class, 'index'])->name('contact
 Route::post('/inquiries', [PublicInquiryController::class, 'store'])->name('inquiries.store');
 
 Route::get('api/payment', [GuestPaymentApiController::class, 'payment']);
-Route::get('api/v1/details', [\App\Http\Controllers\Api\VillageDataApiController::class, 'getDetails']);
-Route::get('api/v1/shops', [\App\Http\Controllers\Api\VillageDataApiController::class, 'shops']);
-Route::get('api/v1/homes', [\App\Http\Controllers\Api\VillageDataApiController::class, 'homes']);
+Route::get('api/v1/details', [VillageDataApiController::class, 'getDetails']);
+Route::get('api/v1/shops', [VillageDataApiController::class, 'shops']);
+Route::get('api/v1/homes', [VillageDataApiController::class, 'homes']);
 
 Route::get('api/villages/search', VillageSearchController::class)->middleware('auth');
 
@@ -74,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('users', [ManagedUserController::class, 'index'])->name('managed-users.index');
     Route::post('users', [ManagedUserController::class, 'store'])->name('managed-users.store');
+    Route::put('users/{user}', [ManagedUserController::class, 'update'])->name('managed-users.update');
+    Route::delete('users/{user}', [ManagedUserController::class, 'destroy'])->name('managed-users.destroy');
 
     Route::get('villages', [VillageController::class, 'index'])->name('villages.index');
     Route::get('villages/create', [VillageController::class, 'create'])->name('villages.create');

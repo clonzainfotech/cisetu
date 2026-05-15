@@ -52,6 +52,21 @@ class Village extends Model
         return $this->hasMany(User::class);
     }
 
+    public function homes(): HasMany
+    {
+        return $this->hasMany(Home::class);
+    }
+
+    public function shops(): HasMany
+    {
+        return $this->hasMany(Shop::class);
+    }
+
+    public function subscriptionHistories(): HasMany
+    {
+        return $this->hasMany(SubscriptionHistory::class);
+    }
+
     public function maxUserAccounts(): ?int
     {
         if ($this->plan) {

@@ -20,7 +20,7 @@ import debounce from 'lodash/debounce';
 import { Search } from 'lucide-vue-next';
 import { dashboard } from '@/routes';
 import { index as indexDistricts, store as storeDistrict } from '@/routes/districts';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 
 type Props = {
@@ -30,6 +30,8 @@ type Props = {
         total: number;
         from: number;
         to: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
     };
     states: Array<{ id: number; name_en: string; code: string }>;
     filters: {
@@ -43,11 +45,17 @@ const props = defineProps<Props>();
 const search = ref(props.filters.search || '');
 const limit = ref(String(props.filters.limit || 25));
 
+const paginationQuery = computed(() => ({
+    search: search.value || undefined,
+    limit: limit.value,
+}));
+
 const updateList = debounce(() => {
-    router.get(indexDistricts().url, { search: search.value, limit: limit.value }, {
-        preserveState: true,
-        replace: true,
-    });
+    router.get(
+        indexDistricts().url,
+        { search: search.value || undefined, limit: limit.value, page: 1 },
+        { preserveState: true, replace: true, preserveScroll: true },
+    );
 }, 300);
 
 watch([search, limit], () => updateList());
@@ -72,8 +80,8 @@ defineOptions({
             description="Add districts under a state (Super Master Admin)"
         />
 
-        <div class="grid grid-cols-1 gap-6 lg:h-[calc(100dvh-14rem)] lg:grid-cols-2 lg:items-start lg:overflow-hidden">
-            <Card class="lg:h-full lg:overflow-hidden">
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+            <Card class="min-w-0">
                 <CardHeader>
                     <div class="flex items-center justify-between gap-4">
                         <CardTitle>Districts list</CardTitle>
@@ -83,7 +91,7 @@ defineOptions({
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent class="flex flex-col gap-3 lg:h-[calc(100%-5rem)] lg:overflow-hidden">
+                <CardContent class="space-y-4">
                     <div
                         v-if="districts.data.length === 0"
                         class="rounded-lg border border-dashed p-6 text-sm text-muted-foreground"
@@ -91,7 +99,7 @@ defineOptions({
                         No districts yet.
                     </div>
 
-                    <div v-else class="min-h-0 flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
+                    <div v-else class="-mx-6 flex max-h-[min(70vh,calc(100dvh-14rem))] flex-col gap-3 overflow-y-auto px-6">
                         <div
                             v-for="d in districts.data"
                             :key="d.id"
@@ -126,13 +134,23 @@ defineOptions({
                                     <SelectItem value="100">100</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Pagination :meta="{ from: districts.from, to: districts.to, total: districts.total, links: districts.links }" />
+                            <Pagination
+                                :meta="{
+                                    from: districts.from,
+                                    to: districts.to,
+                                    total: districts.total,
+                                    prev_page_url: districts.prev_page_url,
+                                    next_page_url: districts.next_page_url,
+                                    links: districts.links,
+                                }"
+                                :query="paginationQuery"
+                            />
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card class="lg:sticky lg:top-6 lg:self-start">
+            <Card class="lg:sticky lg:top-20 lg:self-start">
                 <CardHeader>
                     <CardTitle>Add district</CardTitle>
                 </CardHeader>

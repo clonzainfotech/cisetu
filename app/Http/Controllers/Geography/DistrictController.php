@@ -27,7 +27,7 @@ class DistrictController extends Controller
         ]);
 
         $search = $validated['search'] ?? null;
-        $limit = (int) ($validated['limit'] ?? 25);
+        $limit = $this->resolvePerPageLimit($request, 25);
 
         $districts = District::query()
             ->with('state:id,name_en')
@@ -40,6 +40,10 @@ class DistrictController extends Controller
             ->orderByRaw('LOWER(districts.name_en)')
             ->paginate($limit)
             ->withQueryString()
+            ->appends(array_filter([
+                'search' => $search,
+                'limit' => $limit,
+            ], fn ($value) => $value !== null && $value !== ''))
             ->through(fn (District $d) => [
                 'id' => $d->id,
                 'name_en' => $d->name_en,

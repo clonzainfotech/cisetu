@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Pencil, Trash2, Home as HomeIcon, Download, Upload, Languages, Search } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { store as storeHome, update as updateHome, destroy as destroyHome, index as indexHome, exportMethod as exportHome, importMethod as importHome, template as templateHome } from '@/routes/homes';
 import Pagination from '@/components/Pagination.vue';
 import ImportModal from '@/components/ImportModal.vue';
@@ -38,6 +38,8 @@ type Props = {
         total: number;
         from: number;
         to: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
     };
     filters: {
         search: string | null;
@@ -56,11 +58,25 @@ const props = defineProps<Props>();
 const search = ref(props.filters.search || '');
 const limit = ref(String(props.filters.limit || 10));
 
+const paginationQuery = computed(() => ({
+    search: search.value || undefined,
+    limit: limit.value,
+}));
+
 const updateList = debounce(() => {
-    router.get(indexHome().url, { search: search.value, limit: limit.value }, {
-        preserveState: true,
-        replace: true,
-    });
+    router.get(
+        indexHome().url,
+        {
+            search: search.value || undefined,
+            limit: limit.value,
+            page: 1,
+        },
+        {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        },
+    );
 }, 300);
 
 watch([search, limit], () => updateList());
@@ -69,6 +85,29 @@ watch([search, limit], () => updateList());
 const editingHome = ref<Props['homes']['data'][0] | null>(null);
 const deleteHomeId = ref<number | null>(null);
 const isDeleteOpen = ref(false);
+const formPanelRef = ref<HTMLElement | null>(null);
+
+const scrollFormIntoView = (): void => {
+    nextTick(() => {
+        const panel = formPanelRef.value;
+
+        if (!panel) {
+            return;
+        }
+
+        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+        const headerOffset = 88;
+        const rect = panel.getBoundingClientRect();
+        const isFullyVisible =
+            rect.top >= headerOffset && rect.bottom <= window.innerHeight;
+
+        if (!isDesktop || !isFullyVisible) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        panel.querySelector<HTMLElement>('input:not([type="hidden"])')?.focus();
+    });
+};
 
 const form = useForm({
     property_no: '',
@@ -92,6 +131,7 @@ const editHome = (h: Props['homes']['data'][0]) => {
         total: h.total,
     });
     form.reset();
+    scrollFormIntoView();
 };
 
 const cancelEdit = () => {
@@ -196,8 +236,8 @@ defineOptions({
 <template>
     <Head title="Personal Tax (Homes)" />
 
-    <div class="flex flex-col gap-8">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div class="flex flex-col gap-6">
+        <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <Heading
                 variant="small"
                 title="Personal Tax Management (Homes)"
@@ -223,9 +263,8 @@ defineOptions({
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-            <div class="lg:col-span-2 space-y-4">
-                <Card>
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+            <Card class="min-w-0">
                     <CardHeader class="pb-3">
                         <div class="flex items-center justify-between gap-4">
                             <CardTitle>Property List</CardTitle>
@@ -241,10 +280,10 @@ defineOptions({
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div class="relative overflow-x-auto">
+                    <CardContent class="space-y-4">
+                        <div class="-mx-6 max-h-[min(70vh,calc(100dvh-14rem))] overflow-x-auto overflow-y-auto px-6">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-muted/50 text-xs uppercase">
+                                <thead class="sticky top-0 z-10 bg-muted/95 text-xs uppercase shadow-sm backdrop-blur-sm">
                                     <tr>
                                         <th class="px-4 py-3">Property No</th>
                                         <th class="px-4 py-3">House No</th>
@@ -255,7 +294,12 @@ defineOptions({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="h in homes.data" :key="h.id" class="border-b hover:bg-muted/30 transition-colors">
+                                    <tr
+                                        v-for="h in homes.data"
+                                        :key="h.id"
+                                        class="border-b transition-colors hover:bg-muted/30"
+                                        :class="editingHome?.id === h.id ? 'bg-primary/5 ring-1 ring-inset ring-primary/25' : ''"
+                                    >
                                         <td class="px-4 py-3 font-medium whitespace-nowrap">{{ h.property_no }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap">{{ h.house_no }}</td>
                                         <td class="px-4 py-3 font-medium truncate max-w-[150px]" :title="h.owner">{{ h.owner }}</td>
@@ -281,7 +325,7 @@ defineOptions({
                             </table>
                         </div>
                         
-                        <div class="mt-4 flex items-center justify-between border-t pt-4">
+                        <div class="flex items-center justify-between border-t pt-4">
                             <div class="text-xs text-muted-foreground">
                                 Total: {{ homes.total }} records
                             </div>
@@ -302,14 +346,30 @@ defineOptions({
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Pagination :meta="{ from: homes.from, to: homes.to, total: homes.total, links: homes.links }" />
+                                <Pagination
+                                    :meta="{
+                                        from: homes.from,
+                                        to: homes.to,
+                                        total: homes.total,
+                                        prev_page_url: homes.prev_page_url,
+                                        next_page_url: homes.next_page_url,
+                                        links: homes.links,
+                                    }"
+                                    :query="paginationQuery"
+                                />
                             </div>
                         </div>
                     </CardContent>
-                </Card>
-            </div>
+            </Card>
 
-            <Card class="sticky top-6 h-fit shadow-lg border-primary/10">
+            <aside
+                ref="formPanelRef"
+                class="scroll-mt-24 lg:sticky lg:top-20 lg:z-10 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:self-start"
+            >
+            <Card
+                class="border-primary/10 shadow-lg transition-shadow"
+                :class="editingHome ? 'ring-2 ring-primary/30' : ''"
+            >
                 <CardHeader class="flex flex-row items-center justify-between border-b bg-muted/20">
                     <CardTitle class="text-lg">{{ editingHome ? 'Edit Property' : 'Add New Property' }}</CardTitle>
                     <span v-if="isTransliterating" class="text-[10px] text-blue-500 animate-pulse flex items-center gap-1">
@@ -403,6 +463,7 @@ defineOptions({
                     </form>
                 </CardContent>
             </Card>
+            </aside>
         </div>
     </div>
 
@@ -413,8 +474,8 @@ defineOptions({
         :import-url="importHome().url"
         :template-url="templateHome().url"
         :notes="[
-            'Do not change or remove the column headers in the template.',
-            'All fields are mandatory fields.',
+            'Upload CSV or Excel (.xlsx) — Gujarati headers like your TGP file are supported.',
+            'AI mapping auto-detects columns when format differs from the template.',
             'Duplicate Property Numbers will be automatically updated with new data.',
             'Ensure the file size does not exceed 10MB.'
         ]"

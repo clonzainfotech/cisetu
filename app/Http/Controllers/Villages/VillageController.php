@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Villages;
 
+use App\Actions\Villages\DeleteVillage;
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -246,18 +247,14 @@ class VillageController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Village $village): RedirectResponse
+    public function destroy(Request $request, Village $village, DeleteVillage $deleteVillage): RedirectResponse
     {
         /** @var User $actor */
         $actor = $request->user();
 
         abort_unless($actor->isSuperMasterAdmin(), 403);
 
-        if ($village->logo) {
-            Storage::disk('public')->delete($village->logo);
-        }
-
-        $village->delete();
+        $deleteVillage->handle($village);
 
         return redirect()->route('villages.index')->with('toast', [
             'type' => 'success',

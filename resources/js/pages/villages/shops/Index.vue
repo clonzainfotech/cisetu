@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Pencil, Trash2, Store, Download, Upload, Languages, Search } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { store as storeShop, update as updateShop, destroy as destroyShop, index as indexShop, exportMethod as exportShop, importMethod as importShop, template as templateShop } from '@/routes/shops';
 import Pagination from '@/components/Pagination.vue';
 import ImportModal from '@/components/ImportModal.vue';
@@ -33,6 +33,10 @@ type Props = {
         }>;
         links: Array<any>;
         total: number;
+        from: number;
+        to: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
     };
     filters: {
         search: string | null;
@@ -51,11 +55,25 @@ const props = defineProps<Props>();
 const search = ref(props.filters.search || '');
 const limit = ref(String(props.filters.limit || 10));
 
+const paginationQuery = computed(() => ({
+    search: search.value || undefined,
+    limit: limit.value,
+}));
+
 const updateList = debounce(() => {
-    router.get(indexShop().url, { search: search.value, limit: limit.value }, {
-        preserveState: true,
-        replace: true,
-    });
+    router.get(
+        indexShop().url,
+        {
+            search: search.value || undefined,
+            limit: limit.value,
+            page: 1,
+        },
+        {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        },
+    );
 }, 300);
 
 watch([search, limit], () => updateList());
@@ -64,6 +82,22 @@ watch([search, limit], () => updateList());
 const editingShop = ref<Props['shops']['data'][0] | null>(null);
 const deleteShopId = ref<number | null>(null);
 const isDeleteOpen = ref(false);
+const formPanelRef = ref<HTMLElement | null>(null);
+
+const scrollFormIntoView = (): void => {
+    nextTick(() => {
+        const panel = formPanelRef.value;
+        if (!panel) {
+            return;
+        }
+        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+        const rect = panel.getBoundingClientRect();
+        if (!isDesktop || rect.top < 88 || rect.bottom > window.innerHeight) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        panel.querySelector<HTMLElement>('input:not([type="hidden"])')?.focus();
+    });
+};
 
 const form = useForm({
     reg_no: '',
@@ -81,6 +115,7 @@ const editShop = (s: Props['shops']['data'][0]) => {
         total: s.total,
     });
     form.reset();
+    scrollFormIntoView();
 };
 
 const cancelEdit = () => {
@@ -184,8 +219,8 @@ defineOptions({
 <template>
     <Head title="Professional Tax (Shops)" />
 
-    <div class="flex flex-col gap-8">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div class="flex flex-col gap-6">
+        <div class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <Heading
                 variant="small"
                 title="Professional Tax Management (Shops)"
@@ -211,10 +246,9 @@ defineOptions({
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
-            <div class="lg:col-span-2 space-y-4">
-                <Card>
-                    <CardHeader class="pb-3">
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
+            <Card class="min-w-0">
+                    <CardHeader class="shrink-0 pb-3">
                         <div class="flex items-center justify-between gap-4">
                             <CardTitle>Shop List</CardTitle>
                             <div class="flex items-center gap-2">
@@ -229,10 +263,10 @@ defineOptions({
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div class="relative overflow-x-auto">
+                    <CardContent class="space-y-4">
+                        <div class="-mx-6 max-h-[min(70vh,calc(100dvh-14rem))] overflow-x-auto overflow-y-auto px-6">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-muted/50 text-xs uppercase">
+                                <thead class="sticky top-0 z-10 bg-muted/95 text-xs uppercase shadow-sm backdrop-blur-sm">
                                     <tr>
                                         <th class="px-4 py-3">Reg No</th>
                                         <th class="px-4 py-3">Shop Name</th>
@@ -241,7 +275,12 @@ defineOptions({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="s in shops.data" :key="s.id" class="border-b hover:bg-muted/30 transition-colors">
+                                    <tr
+                                        v-for="s in shops.data"
+                                        :key="s.id"
+                                        class="border-b transition-colors hover:bg-muted/30"
+                                        :class="editingShop?.id === s.id ? 'bg-primary/5 ring-1 ring-inset ring-primary/25' : ''"
+                                    >
                                         <td class="px-4 py-3 font-medium whitespace-nowrap">{{ s.reg_no }}</td>
                                         <td class="px-4 py-3 truncate max-w-[200px]" :title="s.name">{{ s.name }}</td>
                                         <td class="px-4 py-3 font-bold text-slate-900 dark:text-white whitespace-nowrap">₹ {{ s.total }}</td>
@@ -265,7 +304,7 @@ defineOptions({
                             </table>
                         </div>
                         
-                        <div class="mt-4 flex items-center justify-between border-t pt-4">
+                        <div class="mt-4 flex shrink-0 items-center justify-between border-t bg-white pt-4">
                             <div class="text-xs text-muted-foreground">
                                 Total: {{ shops.total }} records
                             </div>
@@ -286,14 +325,30 @@ defineOptions({
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <Pagination :meta="{ from: shops.from, to: shops.to, total: shops.total, links: shops.links }" />
+                                <Pagination
+                                    :meta="{
+                                        from: shops.from,
+                                        to: shops.to,
+                                        total: shops.total,
+                                        prev_page_url: shops.prev_page_url,
+                                        next_page_url: shops.next_page_url,
+                                        links: shops.links,
+                                    }"
+                                    :query="paginationQuery"
+                                />
                             </div>
                         </div>
                     </CardContent>
-                </Card>
-            </div>
+            </Card>
 
-            <Card class="sticky top-6 h-fit shadow-lg border-primary/10">
+            <aside
+                ref="formPanelRef"
+                class="scroll-mt-24 lg:sticky lg:top-20 lg:z-10 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:self-start"
+            >
+            <Card
+                class="border-primary/10 shadow-lg transition-shadow"
+                :class="editingShop ? 'ring-2 ring-primary/30' : ''"
+            >
                 <CardHeader class="flex flex-row items-center justify-between border-b bg-muted/20">
                     <CardTitle class="text-lg">{{ editingShop ? 'Edit Shop' : 'Add New Shop' }}</CardTitle>
                     <span v-if="isTransliterating" class="text-[10px] text-blue-500 animate-pulse flex items-center gap-1">
@@ -349,6 +404,7 @@ defineOptions({
                     </form>
                 </CardContent>
             </Card>
+            </aside>
         </div>
     </div>
 
@@ -359,8 +415,8 @@ defineOptions({
         :import-url="importShop().url"
         :template-url="templateShop().url"
         :notes="[
-            'Do not change or remove the column headers in the template.',
-            'All fields are mandatory fields.',
+            'Upload CSV or Excel (.xlsx) — Gujarati or English headers are supported.',
+            'AI mapping auto-detects columns when format differs from the template.',
             'Duplicate Registration Numbers will be automatically updated with new data.',
             'Ensure the file size does not exceed 10MB.'
         ]"

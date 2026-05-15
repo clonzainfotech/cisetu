@@ -47,12 +47,15 @@ const handleDrop = (e: DragEvent) => {
     }
 };
 
+const useAi = ref(true);
+
 const processImport = () => {
     if (!selectedFile.value) return;
 
     isProcessing.value = true;
     const formData = new FormData();
     formData.append('file', selectedFile.value);
+    formData.append('use_ai', useAi.value ? '1' : '0');
 
     router.post(props.importUrl, formData, {
         onSuccess: () => {
@@ -123,7 +126,7 @@ const close = () => {
                             id="file-upload" 
                             class="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                             @change="handleFileSelect"
-                            accept=".csv"
+                            accept=".csv,.xlsx,.xls"
                         />
                         <div 
                             :class="[
@@ -140,7 +143,7 @@ const close = () => {
                                     <p class="text-sm font-black text-zinc-900 dark:text-white">
                                         <span class="text-blue-500">Click to upload</span> or drag and drop
                                     </p>
-                                    <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">CSV (MAX. 5MB)</p>
+                                    <p class="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">CSV / Excel .xlsx (MAX. 10MB)</p>
                                 </div>
                             </div>
                             <div v-else class="space-y-3">
@@ -158,6 +161,17 @@ const close = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="flex items-center justify-between rounded-xl border border-violet-100/50 bg-violet-50/20 px-4 py-3 dark:border-violet-900/20 dark:bg-violet-900/10">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-violet-900 dark:text-violet-300">Smart AI mapping</p>
+                        <p class="text-[9px] font-bold text-violet-700/70 dark:text-violet-400/70 mt-0.5">Auto-fix Gujarati / messy Excel columns</p>
+                    </div>
+                    <label class="flex cursor-pointer items-center gap-2">
+                        <input v-model="useAi" type="checkbox" class="size-4 rounded border-violet-300" />
+                        <span class="text-[9px] font-black uppercase tracking-widest text-violet-900 dark:text-violet-300">On</span>
+                    </label>
                 </div>
 
                 <!-- Important Notes -->

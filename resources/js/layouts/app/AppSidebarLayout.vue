@@ -26,7 +26,7 @@ const subscription = computed(() => (page.props.subscription as any) || {});
 <template>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar" class="flex-1 overflow-x-hidden min-h-screen">
+        <AppContent variant="sidebar" class="flex-1 min-h-screen overflow-x-clip">
             <!-- Subscription Status Banners -->
             <div 
                 v-if="subscription.is_suspended" 
