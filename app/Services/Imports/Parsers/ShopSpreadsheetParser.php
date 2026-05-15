@@ -4,6 +4,10 @@ namespace App\Services\Imports\Parsers;
 
 class ShopSpreadsheetParser
 {
+    public function __construct(
+        private readonly SpreadsheetAmountParser $amountParser = new SpreadsheetAmountParser,
+    ) {}
+
     /** @var list<string> */
     private const HEADER_KEYWORDS = [
         'reg_no' => ['reg', 'registration', 'નોંધણી', 'રજિસ્ટ્રેશન', 'દુકાન નં', 'shop no'],
@@ -170,16 +174,6 @@ class ShopSpreadsheetParser
 
     private function parseAmount(?string $value): ?float
     {
-        if ($value === null) {
-            return null;
-        }
-
-        $clean = preg_replace('/[^\d.\-]/', '', str_replace(',', '', $value));
-
-        if ($clean === null || $clean === '' || ! is_numeric($clean)) {
-            return null;
-        }
-
-        return round((float) $clean, 2);
+        return $this->amountParser->parse($value);
     }
 }

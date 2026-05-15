@@ -4,6 +4,10 @@ namespace App\Services\Imports\Parsers;
 
 class HomeSpreadsheetParser
 {
+    public function __construct(
+        private readonly SpreadsheetAmountParser $amountParser = new SpreadsheetAmountParser,
+    ) {}
+
     /** @var list<string> */
     private const HEADER_KEYWORDS = [
         'property_no' => ['property', 'prop', 'પ્રોપટી', 'પ્રોપર્ટી', 'મિલ્કત', 'નંબર'],
@@ -116,6 +120,27 @@ class HomeSpreadsheetParser
 
         foreach ($rows as $index => $row) {
             $filled = array_values(array_filter($row, fn ($cell) => $cell !== null && trim((string) $cell) !== ''));
+
+            if (count($filled) === 6) {
+                $normalized = array_map(fn ($cell) => $this->normalizeHeader((string) ($cell ?? '')), array_slice($row, 0, 6));
+                $positional = $this->mapColumnsFromHeaders($normalized);
+
+                if (isset($positional['property_no'], $positional['total'])) {
+                    return ['header_row' => $index, 'columns' => $positional];
+                }
+
+                return [
+                    'header_row' => $index,
+                    'columns' => [
+                        'property_no' => 0,
+                        'house_no' => 1,
+                        'owner' => 2,
+                        'occupant' => 3,
+                        'address' => 4,
+                        'total' => 5,
+                    ],
+                ];
+            }
 
             if (count($filled) === 5) {
                 $normalized = array_map(fn ($cell) => $this->normalizeHeader((string) ($cell ?? '')), array_slice($row, 0, 5));
@@ -353,16 +378,6 @@ class HomeSpreadsheetParser
 
     private function parseAmount(?string $value): ?float
     {
-        if ($value === null) {
-            return null;
-        }
-
-        $clean = preg_replace('/[^\d.\-]/', '', str_replace(',', '', $value));
-
-        if ($clean === null || $clean === '' || ! is_numeric($clean)) {
-            return null;
-        }
-
-        return round((float) $clean, 2);
+        return $this->amountParser->parse($value);
     }
 }

@@ -18,6 +18,16 @@ class Home extends Model
         'total',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'total' => 'decimal:2',
+        ];
+    }
+
     public function village(): BelongsTo
     {
         return $this->belongsTo(Village::class);

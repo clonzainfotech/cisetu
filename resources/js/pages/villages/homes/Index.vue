@@ -120,6 +120,23 @@ const form = useForm({
 
 const isPragati = computed(() => props.village.plan?.import_export);
 
+const formatTax = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    const amount = Number(value);
+
+    if (Number.isNaN(amount)) {
+        return '—';
+    }
+
+    return amount.toLocaleString('en-IN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
+};
+
 const editHome = (h: Props['homes']['data'][0]) => {
     editingHome.value = h;
     form.defaults({
@@ -304,7 +321,7 @@ defineOptions({
                                         <td class="px-4 py-3 whitespace-nowrap">{{ h.house_no }}</td>
                                         <td class="px-4 py-3 font-medium truncate max-w-[150px]" :title="h.owner">{{ h.owner }}</td>
                                         <td class="px-4 py-3 text-xs text-muted-foreground truncate max-w-[200px]" :title="h.address">{{ h.address }}</td>
-                                        <td class="px-4 py-3 font-bold text-slate-900 dark:text-white whitespace-nowrap">₹ {{ h.total }}</td>
+                                        <td class="px-4 py-3 font-bold text-slate-900 dark:text-white whitespace-nowrap">₹ {{ formatTax(h.total) }}</td>
                                         <td class="px-4 py-3 text-right">
                                             <div class="flex justify-end gap-2">
                                                 <Button variant="ghost" size="icon" @click="editHome(h)">

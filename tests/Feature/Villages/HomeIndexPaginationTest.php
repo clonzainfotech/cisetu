@@ -95,3 +95,40 @@ test('homes paginator keeps limit when visiting next page', function () {
         ->where('homes.current_page', 2)
     );
 });
+
+test('homes index includes personal tax on each row', function () {
+    $plan = SubscriptionPlan::factory()->create();
+    $state = State::query()->create(['code' => 'GJ', 'name_en' => 'Gujarat']);
+    $district = District::query()->create(['state_id' => $state->id, 'name_en' => 'Surat']);
+    $village = Village::query()->create([
+        'district_id' => $district->id,
+        'subdomain' => 'kosmba',
+        'name_en' => 'Kosamba',
+        'is_active' => true,
+        'subscription_plan_id' => $plan->id,
+    ]);
+
+    $admin = User::factory()->create(['role' => 'village_admin', 'village_id' => $village->id]);
+
+    Home::query()->create([
+        'village_id' => $village->id,
+        'user_id' => $admin->id,
+        'property_no' => '101',
+        'house_no' => '1',
+        'owner' => 'Test Owner',
+        'occupant' => 'Test Owner',
+        'address' => 'Test Address',
+        'total' => 2790.50,
+    ]);
+
+    $baseDomain = parse_url(config('app.url'), PHP_URL_HOST);
+    $indexUrl = 'http://kosmba.'.$baseDomain.route('homes.index', [], false);
+
+    $this->actingAs($admin)
+        ->get($indexUrl)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('homes.total', 1)
+            ->where('homes.data.0.total', fn ($value) => (float) $value === 2790.5)
+        );
+});

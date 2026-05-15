@@ -8,8 +8,16 @@ use App\Models\User;
 use App\Models\Village;
 use App\Services\Imports\HomeImportService;
 use App\Services\Imports\Parsers\HomeSpreadsheetParser;
+use App\Services\Imports\Parsers\SpreadsheetAmountParser;
 use App\Services\Imports\SpreadsheetReader;
 use Illuminate\Http\UploadedFile;
+
+test('spreadsheet amount parser reads gujarati numerals', function () {
+    $parser = app(SpreadsheetAmountParser::class);
+
+    expect($parser->parse('૭૦૪૫'))->toBe(7045.0)
+        ->and($parser->parse('1,75,20.00'))->toBe(17520.0);
+});
 
 test('home spreadsheet parser reads gujarati xlsx sample', function () {
     $reader = app(SpreadsheetReader::class);
@@ -85,7 +93,8 @@ test('village admin can import homes from xlsx file', function () {
     $response->assertRedirect();
 
     expect(Home::query()->where('village_id', $village->id)->count())->toBeGreaterThan(300)
-        ->and(Home::query()->where('village_id', $village->id)->where('property_no', '2137')->exists())->toBeTrue();
+        ->and(Home::query()->where('village_id', $village->id)->where('property_no', '2137')->exists())->toBeTrue()
+        ->and(Home::query()->where('village_id', $village->id)->where('property_no', '2137')->value('user_id'))->toBe($admin->id);
 });
 
 test('home import service imports csv template format', function () {
@@ -110,8 +119,13 @@ test('home import service imports csv template format', function () {
 
     $file = new UploadedFile($path, 'homes.csv', 'text/csv', null, true);
 
-    $result = app(HomeImportService::class)->import($village, $file, useAi: false);
+    $admin = User::factory()->create(['role' => 'village_admin', 'village_id' => $village->id]);
+
+    $result = app(HomeImportService::class)->import($village, $file, $admin->id, useAi: false);
+
+    $home = Home::query()->where('village_id', $village->id)->where('property_no', '101')->first();
 
     expect($result->imported)->toBe(1)
-        ->and((float) Home::query()->where('village_id', $village->id)->where('property_no', '101')->value('total'))->toBe(500.0);
+        ->and((float) $home->total)->toBe(500.0)
+        ->and($home->user_id)->toBe($admin->id);
 });

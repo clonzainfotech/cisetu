@@ -16,7 +16,7 @@ class HomeImportService
         private readonly OpenAiImportMapper $aiMapper,
     ) {}
 
-    public function import(Village $village, UploadedFile $file, bool $useAi = true): ImportResult
+    public function import(Village $village, UploadedFile $file, int $userId, bool $useAi = true): ImportResult
     {
         $rows = $this->reader->read($file->getRealPath(), $file->getClientOriginalName());
         $method = 'heuristic';
@@ -57,7 +57,7 @@ class HomeImportService
 
         $imported = 0;
 
-        DB::transaction(function () use ($village, $records, &$imported): void {
+        DB::transaction(function () use ($village, $userId, $records, &$imported): void {
             foreach ($records as $record) {
                 Home::query()->updateOrCreate(
                     [
@@ -65,6 +65,7 @@ class HomeImportService
                         'property_no' => $record['property_no'],
                     ],
                     [
+                        'user_id' => $userId,
                         'house_no' => $record['house_no'],
                         'owner' => $record['owner'],
                         'occupant' => $record['occupant'],

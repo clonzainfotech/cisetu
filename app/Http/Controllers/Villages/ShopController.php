@@ -78,6 +78,7 @@ class ShopController extends Controller
 
         Shop::create([
             'village_id' => $village->id,
+            'user_id' => $request->user()->id,
             ...$validated,
         ]);
 
@@ -167,6 +168,7 @@ class ShopController extends Controller
         $result = $shopImportService->import(
             $village,
             $request->file('file'),
+            $request->user()->id,
             $request->boolean('use_ai', true),
         );
 

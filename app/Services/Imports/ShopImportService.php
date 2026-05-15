@@ -16,7 +16,7 @@ class ShopImportService
         private readonly OpenAiImportMapper $aiMapper,
     ) {}
 
-    public function import(Village $village, UploadedFile $file, bool $useAi = true): ImportResult
+    public function import(Village $village, UploadedFile $file, int $userId, bool $useAi = true): ImportResult
     {
         $rows = $this->reader->read($file->getRealPath(), $file->getClientOriginalName());
         $method = 'heuristic';
@@ -57,7 +57,7 @@ class ShopImportService
 
         $imported = 0;
 
-        DB::transaction(function () use ($village, $records, &$imported): void {
+        DB::transaction(function () use ($village, $userId, $records, &$imported): void {
             foreach ($records as $record) {
                 Shop::query()->updateOrCreate(
                     [
@@ -65,6 +65,7 @@ class ShopImportService
                         'reg_no' => $record['reg_no'],
                     ],
                     [
+                        'user_id' => $userId,
                         'name' => $record['name'],
                         'total' => $record['total'],
                     ],
