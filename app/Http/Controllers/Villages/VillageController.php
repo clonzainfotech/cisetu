@@ -247,18 +247,35 @@ class VillageController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Village $village, DeleteVillage $deleteVillage): RedirectResponse
+    public function destroy(Request $request, Village $village, DeleteVillage $deleteVillage): RedirectResponse|\Symfony\Component\HttpFoundation\Response
     {
         /** @var User $actor */
         $actor = $request->user();
 
         abort_unless($actor->isSuperMasterAdmin(), 403);
 
+        $subdomain = $village->subdomain;
+        $onDeletedVillageHost = $subdomain && $this->isHostForSubdomain($request, $subdomain);
+
         $deleteVillage->handle($village);
 
-        return redirect()->route('villages.index')->with('toast', [
+        $toast = [
             'type' => 'success',
             'message' => 'Village deleted successfully',
-        ]);
+        ];
+
+        if ($onDeletedVillageHost) {
+            $url = $this->mainDomainUrl($request, route('villages.index', [], false));
+
+            session()->flash('toast', $toast);
+
+            if ($request->header('X-Inertia')) {
+                return Inertia::location($url);
+            }
+
+            return redirect()->away($url);
+        }
+
+        return redirect()->route('villages.index')->with('toast', $toast);
     }
 }

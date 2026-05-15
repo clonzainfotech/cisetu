@@ -99,6 +99,31 @@ test('deleting a village removes homes shops users and subscription history', fu
         ->and(SubscriptionHistory::query()->where('village_id', $village->id)->count())->toBe(0);
 });
 
+test('deleting village from its subdomain redirects super admin to main villages index', function () {
+    $super = User::factory()->create([
+        'is_super_master_admin' => true,
+        'role' => 'super_master_admin',
+    ]);
+
+    $state = State::query()->create(['code' => 'GJ', 'name_en' => 'Gujarat']);
+    $district = District::query()->create(['state_id' => $state->id, 'name_en' => 'Valsad']);
+    $village = Village::query()->create([
+        'district_id' => $district->id,
+        'subdomain' => 'bagdana',
+        'name_en' => 'Bagdana',
+        'is_active' => true,
+    ]);
+
+    $baseDomain = parse_url(config('app.url'), PHP_URL_HOST);
+    $deleteUrl = 'http://bagdana.'.$baseDomain.route('villages.destroy', $village, false);
+    $mainVillagesUrl = 'http://'.$baseDomain.route('villages.index', [], false);
+
+    $response = $this->actingAs($super)->delete($deleteUrl);
+
+    $response->assertRedirect($mainVillagesUrl);
+    expect(Village::query()->find($village->id))->toBeNull();
+});
+
 test('village admin cannot delete a village from their subdomain', function () {
     $state = State::query()->create(['code' => 'GJ', 'name_en' => 'Gujarat']);
     $district = District::query()->create(['state_id' => $state->id, 'name_en' => 'Surat']);

@@ -587,13 +587,34 @@ const confirmDelete = (village: Props['villages']['data'][0]) => {
     isDeleteOpen.value = true;
 };
 
+const redirectToMainAdmin = (path = '/villages'): void => {
+    const protocol = window.location.protocol;
+    const baseDomain = appUrlHost.value || 'cis.test';
+
+    window.location.href = `${protocol}//${baseDomain}${path}`;
+};
+
 const doDelete = () => {
-    if (!deleteVillage.value) return;
-    router.delete(destroyVillage(deleteVillage.value.id).url, {
+    if (!deleteVillage.value) {
+        return;
+    }
+
+    const deleted = deleteVillage.value;
+    const currentVillage = page.props.village as { id?: number; subdomain?: string } | null;
+    const deletedFromItsSubdomain =
+        currentVillage?.id === deleted.id ||
+        (deleted.subdomain &&
+            window.location.host === `${deleted.subdomain}.${appUrlHost.value}`);
+
+    router.delete(destroyVillage(deleted.id).url, {
         onSuccess: () => {
             isDeleteOpen.value = false;
             deleteVillage.value = null;
             toast.success('Village deleted');
+
+            if (deletedFromItsSubdomain) {
+                redirectToMainAdmin('/villages');
+            }
         },
     });
 };
