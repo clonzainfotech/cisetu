@@ -300,7 +300,7 @@ defineOptions({
                                     >
                                         <td class="px-4 py-3 font-medium whitespace-nowrap">{{ s.reg_no }}</td>
                                         <td class="px-4 py-3 truncate max-w-[200px]" :title="s.name">{{ s.name }}</td>
-                                        <td class="px-4 py-3 font-bold text-slate-900 dark:text-white whitespace-nowrap">₹ {{ formatTax(s.total) }}</td>
+                                        <td class="px-4 py-3 font-semibold text-foreground whitespace-nowrap">₹ {{ formatTax(s.total) }}</td>
                                         <td class="px-4 py-3 text-right">
                                             <div class="flex justify-end gap-2">
                                                 <Button variant="ghost" size="icon" @click="editShop(s)">
