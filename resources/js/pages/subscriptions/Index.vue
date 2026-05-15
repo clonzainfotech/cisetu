@@ -161,7 +161,7 @@ defineOptions({
                 <!-- Pagination & Limit Footer -->
                 <div
                     v-if="villages.data.length > 0"
-                    class="sticky bottom-0 -mx-6 -mb-6 flex items-center justify-between gap-3 border-t bg-card dark:bg-zinc-950 px-6 py-4"
+                    class="sticky bottom-0 -mx-6 -mb-6 flex items-center justify-between gap-3 border-t border-border bg-white px-6 py-4"
                 >
                     <div class="text-xs text-muted-foreground font-medium">
                         Showing {{ villages.from }} to {{ villages.to }} of {{ villages.total }} villages
@@ -169,7 +169,7 @@ defineOptions({
                     
                     <div class="flex items-center gap-3">
                         <Select v-model="limit">
-                            <SelectTrigger class="h-10 w-auto gap-2 px-3 shadow-sm font-bold text-xs">
+                            <SelectTrigger class="h-10 w-auto gap-2 border-border bg-white px-3 shadow-sm font-bold text-xs">
                                 <span>{{ limit }}</span>
                                 <span class="text-muted-foreground font-medium">/ page</span>
                             </SelectTrigger>

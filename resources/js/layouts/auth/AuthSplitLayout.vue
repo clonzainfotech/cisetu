@@ -26,7 +26,7 @@ defineProps<{
             >
             <!-- High-Fidelity Doodles Layer -->
             <div 
-                class="absolute inset-0 pointer-events-none z-0 opacity-15 transition-all dark:opacity-[0.05] dark:invert"
+                class="absolute inset-0 pointer-events-none z-0 opacity-15"
                 style="background-image: url('/images/bg-pattern.png'); background-repeat: repeat; background-size: 600px; mix-blend-mode: soft-light;"
             ></div>
             
@@ -73,8 +73,8 @@ defineProps<{
         <div class="auth-right-panel relative flex h-full items-center justify-center p-6 lg:p-16 overflow-y-auto transition-colors duration-500">
             <!-- High-Fidelity Doodles Layer -->
             <div 
-                class="absolute inset-0 pointer-events-none z-0 opacity-[0.05] transition-all dark:opacity-[0.08] dark:invert"
-                style="background-image: url('/images/bg-pattern.png'); background-repeat: repeat; background-size: 600px; mix-blend-mode: multiply; dark:mix-blend-mode: overlay;"
+                class="absolute inset-0 pointer-events-none z-0 opacity-[0.05]"
+                style="background-image: url('/images/bg-pattern.png'); background-repeat: repeat; background-size: 600px; mix-blend-mode: multiply;"
             ></div>
             
             <!-- Mobile Navigation -->
@@ -87,11 +87,11 @@ defineProps<{
             <!-- Form Content -->
             <div class="relative z-10 mx-auto flex w-full flex-col justify-center space-y-12 py-12 sm:w-[440px]">
                 <div class="flex flex-col space-y-4 text-center lg:text-left">
-                    <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground dark:text-white/90">Sign In</div>
-                    <h1 class="text-5xl font-serif-premium tracking-tight text-foreground dark:text-white" v-if="title">
+                    <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Sign In</div>
+                    <h1 class="text-5xl font-serif-premium tracking-tight text-foreground" v-if="title">
                         Welcome back.
                     </h1>
-                    <p class="text-lg text-muted-foreground leading-relaxed dark:text-white/70" v-if="description">
+                    <p class="text-lg text-muted-foreground leading-relaxed" v-if="description">
                         {{ description }}
                     </p>
                 </div>

@@ -24,13 +24,13 @@ const nextLink = props.meta.links[props.meta.links.length - 1]?.url;
 
 <template>
     <div class="flex items-center gap-1">
-        <div class="flex items-center h-10 border border-border rounded-lg bg-background shadow-sm overflow-hidden transition-colors">
+        <div class="flex items-center h-10 overflow-hidden rounded-lg border border-border bg-white shadow-sm transition-colors">
             <div class="px-4 py-2 text-sm font-medium text-foreground">
                 <span class="font-bold text-foreground">{{ meta.from || 0 }}-{{ meta.to || 0 }}</span>
                 <span class="text-muted-foreground ml-1">of {{ meta.total }}</span>
             </div>
             
-            <div class="flex items-center border-l border-border h-full px-2 gap-1 bg-background">
+            <div class="flex h-full items-center gap-1 border-l border-border bg-white px-2">
                 <Link
                     v-if="prevLink"
                     :href="prevLink"

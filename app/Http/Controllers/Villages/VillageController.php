@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Villages;
 
 use App\Http\Controllers\Controller;
-use App\Models\District;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\Village;
@@ -76,16 +75,6 @@ class VillageController extends Controller
                 ],
             ]);
 
-        $districts = District::query()
-            ->with('state')
-            ->orderByRaw('LOWER(name_en)')
-            ->get()
-            ->map(fn (District $d) => [
-                'id' => $d->id,
-                'name_en' => $d->name_en,
-                'state_name_en' => $d->state->name_en,
-            ]);
-
         $plans = SubscriptionPlan::query()
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -98,7 +87,6 @@ class VillageController extends Controller
                 'search' => $search,
                 'limit' => $limit,
             ],
-            'districts' => $districts,
             'plans' => $plans,
         ]);
     }

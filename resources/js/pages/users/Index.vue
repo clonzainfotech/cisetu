@@ -181,14 +181,14 @@ const page = usePage();
 
                     <div
                         v-if="users.data.length > 0"
-                        class="sticky bottom-0 -mx-6 mt-1 flex items-center justify-between gap-3 border-t bg-background px-6 py-3"
+                        class="sticky bottom-0 -mx-6 mt-1 flex items-center justify-between gap-3 border-t border-border bg-white px-6 py-3"
                     >
                         <div class="text-xs text-muted-foreground">
                             Total: {{ users.total }} records
                         </div>
                         <div class="flex items-center gap-2">
                             <Select v-model="limit">
-                                <SelectTrigger class="h-10 w-auto gap-1 px-3 shadow-sm">
+                                <SelectTrigger class="h-10 w-auto gap-1 border-border bg-white px-3 shadow-sm">
                                     <span class="text-sm font-bold">{{ limit }}</span>
                                     <span class="text-sm text-muted-foreground">per page</span>
                                 </SelectTrigger>

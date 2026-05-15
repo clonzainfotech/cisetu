@@ -274,9 +274,9 @@ defineOptions({
                                 <!-- Limit Dropdown -->
                                 <div class="flex items-center">
                                     <Select v-model="limit">
-                                        <SelectTrigger class="h-10 border-slate-200 dark:border-slate-800 focus:ring-slate-100 dark:focus:ring-slate-800 px-3 w-auto gap-1 shadow-sm bg-white dark:bg-slate-900 transition-colors">
-                                            <span class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ limit }}</span>
-                                            <span class="text-sm text-slate-500 dark:text-slate-400">per page</span>
+                                        <SelectTrigger class="h-10 border-slate-200 bg-white px-3 w-auto gap-1 shadow-sm focus:ring-slate-100">
+                                            <span class="text-sm font-bold text-slate-900">{{ limit }}</span>
+                                            <span class="text-sm text-slate-500">per page</span>
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="10">10</SelectItem>

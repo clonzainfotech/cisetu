@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\InquiryManagementController;
 use App\Http\Controllers\Api\GuestPaymentApiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Geography\DistrictController;
+use App\Http\Controllers\Geography\DistrictSearchController;
 use App\Http\Controllers\Geography\StateController;
 use App\Http\Controllers\PublicInquiryController;
 use App\Http\Controllers\Subscriptions\ContactController;
@@ -56,21 +57,7 @@ Route::get('api/v1/homes', [\App\Http\Controllers\Api\VillageDataApiController::
 
 Route::get('api/villages/search', VillageSearchController::class)->middleware('auth');
 
-Route::get('api/districts/search', function (Request $request) {
-    $search = $request->query('q');
-    
-    $districts = \App\Models\District::query()
-        ->where('is_active', true)
-        ->when($search, function($query, $search) {
-            $query->where('name_en', 'like', "%{$search}%")
-                  ->orWhere('name_local', 'like', "%{$search}%");
-        })
-        ->orderBy('name_en')
-        ->limit(15)
-        ->get(['id', 'name_en']);
-        
-    return response()->json($districts);
-})->name('api.districts.search');
+Route::get('api/districts/search', DistrictSearchController::class)->name('api.districts.search');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

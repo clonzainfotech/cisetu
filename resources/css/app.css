@@ -82,43 +82,6 @@
         --auth-right: var(--background);
     }
 
-    .dark {
-        --background: hsl(240 10% 5%);
-        --foreground: hsl(0 0% 100%);
-        --card: hsl(240 10% 8%);
-        --card-foreground: hsl(0 0% 100%);
-        --popover: hsl(240 10% 5%);
-        --popover-foreground: hsl(0 0% 100%);
-        --primary: hsl(192 72% 35%);
-        --primary-foreground: hsl(0 0% 100%);
-        --secondary: hsl(240 3.7% 15%);
-        --secondary-foreground: hsl(0 0% 100%);
-        --muted: hsl(240 3.7% 12%);
-        --muted-foreground: hsl(0 0% 95%);
-        --accent: hsl(192 72% 35% / 0.3);
-        --accent-foreground: hsl(0 0% 100%);
-        --destructive: hsl(0 62.8% 30.6%);
-        --destructive-foreground: hsl(0 0% 100%);
-        --border: hsl(240 3.7% 18%);
-        --input: hsl(240 3.7% 18%);
-        --ring: hsl(192 72% 35%);
-        --chart-1: hsl(220 70% 50%);
-        --chart-2: hsl(160 60% 45%);
-        --chart-3: hsl(30 80% 55%);
-        --chart-4: hsl(280 65% 60%);
-        --chart-5: hsl(340 75% 55%);
-        --sidebar: hsl(0 0% 0%);
-        --sidebar-foreground: hsl(240 4.8% 98%);
-        --sidebar-primary: hsl(192 72% 35%);
-        --sidebar-primary-foreground: hsl(0 0% 100%);
-        --sidebar-accent: hsl(240 3.7% 10%);
-        --sidebar-accent-foreground: hsl(240 4.8% 98%);
-        --sidebar-border: hsl(240 3.7% 8%);
-        --sidebar-ring: hsl(192 72% 35%);
-
-        --auth-left: hsl(0 0% 0%); /* JET BLACK */
-        --auth-right: hsl(240 10% 4.5%); /* CHARCOAL */
-    }
 }
 
 @layer base {
@@ -132,6 +95,7 @@
 
 html {
     scroll-behavior: smooth;
+    color-scheme: light;
 }
 
 /* Auth Specific Utilities */

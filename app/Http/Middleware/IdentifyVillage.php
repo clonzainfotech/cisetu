@@ -5,12 +5,21 @@ namespace App\Http\Middleware;
 use App\Models\Village;
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 
 class IdentifyVillage
 {
+    /** @var list<string> */
+    private const RESERVED_SUBDOMAINS = [
+        'www',
+        'admin',
+        'api',
+        'app',
+        'mail',
+        'staging',
+    ];
+
     /**
      * Handle an incoming request.
      *
@@ -23,46 +32,55 @@ class IdentifyVillage
         $user = $request->user();
 
         // 1. Identify Village on Subdomain
-        if ($host !== $baseDomain && str_ends_with($host, $baseDomain)) {
+        if ($host !== $baseDomain && str_ends_with($host, '.'.$baseDomain)) {
             $subdomain = str_replace('.'.$baseDomain, '', $host);
 
-            if ($subdomain !== 'www') {
-                $village = Village::where('subdomain', $subdomain)->where('is_active', true)->first();
+            if ($subdomain !== 'www' && ! in_array($subdomain, self::RESERVED_SUBDOMAINS, true)) {
+                $village = Village::query()
+                    ->where('subdomain', $subdomain)
+                    ->first();
 
-                if ($village) {
-                    $request->merge(['village' => $village]);
-                    app()->instance(Village::class, $village);
+                if (! $village) {
+                    $protocol = $request->isSecure() ? 'https' : 'http';
+                    $path = $request->getPathInfo() !== '/' ? $request->getPathInfo() : '';
 
-                    // Enforce village isolation for authenticated users
-                    if ($user && ! $user->isSuperMasterAdmin() && $user->village_id != $village->id && ! $request->routeIs('logout')) {
-                        
-                        // If they are visiting the LOGIN page, force a logout to allow a fresh login
-                        if ($request->routeIs('login')) {
-                            Auth::guard('web')->logout();
-                            $request->session()->invalidate();
-                            $request->session()->regenerateToken();
-                            return $next($request);
-                        }
+                    return redirect()->away($protocol.'://'.$baseDomain.$path);
+                }
 
-                        // If they belong to a different village, redirect them there
-                        if ($user->village_id && $user->village) {
-                            $targetSubdomain = $user->village->subdomain;
-                            $protocol = $request->isSecure() ? 'https://' : 'http://';
-                            $redirectUrl = $protocol.$targetSubdomain.'.'.$baseDomain.'/dashboard';
+                $request->merge(['village' => $village]);
+                app()->instance(Village::class, $village);
 
-                            $request->session()->save();
-                            return redirect()->away($redirectUrl);
-                        }
+                // Enforce village isolation for authenticated users
+                if ($user && ! $user->isSuperMasterAdmin() && $user->village_id != $village->id && ! $request->routeIs('logout')) {
 
-                        // If they have no valid village assignment, force logout
+                    // If they are visiting the LOGIN page, force a logout to allow a fresh login
+                    if ($request->routeIs('login')) {
                         Auth::guard('web')->logout();
                         $request->session()->invalidate();
                         $request->session()->regenerateToken();
 
-                        return redirect()->route('login')->withErrors([
-                            'email' => 'You do not have access to the '.$village->name_en.' village portal.',
-                        ]);
+                        return $next($request);
                     }
+
+                    // If they belong to a different village, redirect them there
+                    if ($user->village_id && $user->village) {
+                        $targetSubdomain = $user->village->subdomain;
+                        $protocol = $request->isSecure() ? 'https' : 'http';
+                        $redirectUrl = $protocol.'://'.$targetSubdomain.'.'.$baseDomain.'/dashboard';
+
+                        $request->session()->save();
+
+                        return redirect()->away($redirectUrl);
+                    }
+
+                    // If they have no valid village assignment, force logout
+                    Auth::guard('web')->logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return redirect()->route('login')->withErrors([
+                        'email' => 'You do not have access to the '.$village->name_en.' village portal.',
+                    ]);
                 }
             }
         }
@@ -72,10 +90,11 @@ class IdentifyVillage
             if ($user->isVillageAdmin()) {
                 $village = $user->village;
                 if ($village && $village->subdomain) {
-                    $protocol = $request->isSecure() ? 'https://' : 'http://';
-                    $redirectUrl = $protocol.$village->subdomain.'.'.$baseDomain.'/dashboard';
-                    
+                    $protocol = $request->isSecure() ? 'https' : 'http';
+                    $redirectUrl = $protocol.'://'.$village->subdomain.'.'.$baseDomain.'/dashboard';
+
                     $request->session()->save();
+
                     return redirect()->away($redirectUrl);
                 }
             }

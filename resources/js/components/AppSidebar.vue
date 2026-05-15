@@ -39,7 +39,6 @@ import { dashboard } from '@/routes';
 import { index as usersIndex } from '@/routes/managed-users';
 import { index as villagesIndex } from '@/routes/villages';
 import { index as districtsIndex } from '@/routes/districts';
-import { index as statesIndex } from '@/routes/states';
 import { index as subscriptionsIndex } from '@/routes/subscriptions';
 import { index as homesIndex } from '@/routes/homes';
 import { index as shopsIndex } from '@/routes/shops';
@@ -84,11 +83,6 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Subscriptions',
                 href: subscriptionsIndex().url,
                 icon: CreditCard,
-            },
-            {
-                title: 'States',
-                href: statesIndex().url,
-                icon: MapPinned,
             },
             {
                 title: 'Districts',

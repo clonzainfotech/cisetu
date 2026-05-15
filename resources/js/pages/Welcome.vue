@@ -39,8 +39,9 @@ const handleDistrictInput = () => {
     districtLoading.value = true;
     districtTimeout = setTimeout(async () => {
         try {
-            const res = await fetch(`/api/districts/search?q=${encodeURIComponent(districtSearch.value)}`);
-            districtSuggestions.value = await res.json();
+            const res = await fetch(`/api/districts/search?search=${encodeURIComponent(districtSearch.value)}`);
+            const payload = await res.json();
+            districtSuggestions.value = payload.data ?? [];
         } catch (e) {
             console.error('Failed to load districts', e);
         } finally {

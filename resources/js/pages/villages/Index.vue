@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import DistrictSearchSelect from '@/components/DistrictSearchSelect.vue';
 import Pagination from '@/components/Pagination.vue';
 import debounce from 'lodash/debounce';
 import { Pencil, Trash2, Search, UserPlus, ExternalLink, Copy, Building2, CheckCircle2, Clock, XCircle, Globe, Languages, RefreshCw, Palette, Key, Terminal } from 'lucide-vue-next';
@@ -55,11 +56,19 @@ type Props = {
         search: string | null;
         limit: number;
     };
-    districts: Array<{ id: number; name_en: string; state_name_en: string }>;
     plans: Array<{ id: number; name: string; code: string }>;
 };
 
 const props = defineProps<Props>();
+
+type DistrictOption = {
+    id: number;
+    name_en: string;
+    state_name_en: string;
+};
+
+const selectedDistrict = ref<DistrictOption | null>(null);
+const inquiryDistrictName = ref<string | null>(null);
 
 // Search & Pagination Logic
 const search = ref(props.filters.search || '');
@@ -267,21 +276,67 @@ const openFullPreview = (template: string) => {
     window.open(`/template-preview/${template}`, '_blank');
 };
 
+const selectedLogoFile = ref<File | null>(null);
+
 const logoPreviewUrl = computed(() => {
-    if (typeof File !== 'undefined' && form.logo instanceof File) {
-        return URL.createObjectURL(form.logo);
+    if (selectedLogoFile.value) {
+        return URL.createObjectURL(selectedLogoFile.value);
     }
+
     return '';
 });
+
+const svgToPngFile = (svg: string, filename: string): Promise<File> => {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        const objectUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+
+        image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 400;
+
+            const context = canvas.getContext('2d');
+
+            if (! context) {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Canvas not supported'));
+
+                return;
+            }
+
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                URL.revokeObjectURL(objectUrl);
+
+                if (! blob) {
+                    reject(new Error('Failed to create image'));
+
+                    return;
+                }
+
+                resolve(new File([blob], filename, { type: 'image/png' }));
+            }, 'image/png');
+        };
+
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Failed to load SVG'));
+        };
+
+        image.src = objectUrl;
+    });
+};
 
 const logoVariants = computed(() => {
     if (!form.name_en) return [];
     const colors = ['#0056b3', '#134e4a', '#10b981', '#ef4444', '#f59e0b', '#6366f1', '#ec4899', '#111827'];
     const villageLabel = form.name_local || form.name_en;
     
-    // Find district label
-    const district = props.districts.find(d => String(d.id) === form.district_id);
-    const districtLabel = district ? district.name_en : 'Mumbai City';
+    const districtLabel = selectedDistrict.value?.name_en ?? 'Mumbai City';
     
     return colors.map((color, i) => ({
         id: i,
@@ -374,10 +429,38 @@ const logoVariants = computed(() => {
 });
 
 const pickGeneratedLogo = async (svg: string) => {
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const file = new File([blob], `${form.name_en || 'village'}_logo.svg`, { type: 'image/svg+xml' });
-    form.logo = file;
+    try {
+        const safeName = (form.name_en || 'village').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+        selectedLogoFile.value = await svgToPngFile(svg, `${safeName}_logo.png`);
+        isLogoTouched.value = true;
+        form.clearErrors('logo');
+    } catch {
+        toast.error('Could not use this logo suggestion. Please upload an image file instead.');
+    }
+};
+
+const clearSelectedLogo = () => {
+    selectedLogoFile.value = null;
+    form.logo = null;
     isLogoTouched.value = true;
+    form.clearErrors('logo');
+};
+
+const setSelectedLogoFromInput = (file: File | undefined) => {
+    if (! file) {
+        return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+        toast.error('File is too large! Maximum size is 2MB.');
+
+        return;
+    }
+
+    selectedLogoFile.value = file;
+    form.logo = null;
+    isLogoTouched.value = true;
+    form.clearErrors('logo');
 };
 
 const transliterate = async (text: string) => {
@@ -446,18 +529,31 @@ const editVillage = (village: Props['villages']['data'][0]) => {
     form.subscription_plan_id = village.subscription_plan_id ? String(village.subscription_plan_id) : '';
     form.subscription_start_at = village.subscription_start_at || new Date().toISOString().slice(0, 10);
     form.subscription_expires_at = village.subscription_expires_at || '';
+    selectedLogoFile.value = null;
     form.logo = null;
     isLogoTouched.value = false;
+    selectedDistrict.value = {
+        id: village.district.id,
+        name_en: village.district.name_en,
+        state_name_en: village.district.state.name_en,
+    };
 };
 
 const cancelEdit = () => {
     editingVillage.value = null;
+    selectedLogoFile.value = null;
+    selectedDistrict.value = null;
     form.reset();
 };
 
 const submit = () => {
+    const withLogo = form.transform((data) => ({
+        ...data,
+        logo: selectedLogoFile.value,
+    }));
+
     if (editingVillage.value) {
-        form.post(updateVillage(editingVillage.value.id).url, {
+        withLogo.post(updateVillage(editingVillage.value.id).url, {
             forceFormData: true,
             onSuccess: () => {
                 cancelEdit();
@@ -465,13 +561,14 @@ const submit = () => {
             },
             onError: () => {
                 toast.error('Failed to update village. Please check for errors.');
-            }
+            },
         });
     } else {
-        form.post(storeVillage().url, {
+        withLogo.post(storeVillage().url, {
             forceFormData: true,
             onSuccess: () => {
                 form.reset();
+                selectedLogoFile.value = null;
                 isSubdomainTouched.value = false;
                 isAdminNameTouched.value = false;
                 isAdminEmailTouched.value = false;
@@ -480,7 +577,7 @@ const submit = () => {
             },
             onError: () => {
                 toast.error('Failed to deploy village. Please check for errors.');
-            }
+            },
         });
     }
 };
@@ -551,12 +648,8 @@ onMounted(() => {
     if (prefill) {
         form.name_en = prefill.village_name || '';
         
-        // Find matching district if possible by name
         if (prefill.district_name) {
-            const matchedDistrict = props.districts.find(d => d.name_en.toLowerCase().includes(prefill.district_name.toLowerCase()));
-            if (matchedDistrict) {
-                form.district_id = String(matchedDistrict.id);
-            }
+            inquiryDistrictName.value = prefill.district_name;
         }
         
         if (prefill.plan_id) {
@@ -593,10 +686,10 @@ onMounted(() => {
                 description="Manage and create village administrative units."
             />
             
-            <div class="flex items-center space-x-3 rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-4 py-1.5 shadow-sm transition-all">
+            <div class="flex items-center space-x-3 rounded-full border border-zinc-200 bg-zinc-100 px-4 py-1.5 shadow-sm transition-all">
                 <Switch id="gu-typing" v-model:checked="gujaratiTyping" />
-                <Label for="gu-typing" class="text-xs font-bold cursor-pointer flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-                    <Languages class="h-4 w-4 text-zinc-500 dark:text-zinc-400" /> Gujarati Typing
+                <Label for="gu-typing" class="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-900">
+                    <Languages class="h-4 w-4 text-zinc-500" /> Gujarati Typing
                 </Label>
             </div>
         </div>
@@ -671,14 +764,14 @@ onMounted(() => {
 
                     <div
                         v-if="villages.data.length > 0"
-                        class="sticky bottom-0 -mx-6 mt-1 flex items-center justify-between gap-3 border-t bg-background px-6 py-3"
+                        class="sticky bottom-0 -mx-6 mt-1 flex items-center justify-between gap-3 border-t border-border bg-white px-6 py-3"
                     >
                         <div class="text-xs text-muted-foreground">
                             Total: {{ villages.total }} records
                         </div>
                         <div class="flex items-center gap-2">
                             <Select v-model="limit">
-                                <SelectTrigger class="h-10 w-auto gap-1 px-3 shadow-sm">
+                                <SelectTrigger class="h-10 w-auto gap-1 border-border bg-white px-3 shadow-sm">
                                     <span class="text-sm font-bold">{{ limit }}</span>
                                     <span class="text-sm text-muted-foreground">per page</span>
                                 </SelectTrigger>
@@ -704,22 +797,12 @@ onMounted(() => {
                     <form @submit.prevent="submit" class="grid gap-5" novalidate>
                         <div class="grid gap-2">
                             <Label>District</Label>
-                            <Select v-model="form.district_id">
-                                <SelectTrigger :error="form.errors.district_id">
-                                    <SelectValue placeholder="Select district" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem
-                                            v-for="d in districts"
-                                            :key="d.id"
-                                            :value="String(d.id)"
-                                        >
-                                            <SelectItemText>{{ d.name_en }} ({{ d.state_name_en }})</SelectItemText>
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
+                            <DistrictSearchSelect
+                                v-model="form.district_id"
+                                :error="form.errors.district_id"
+                                :initial-search="inquiryDistrictName"
+                                @update:district="selectedDistrict = $event"
+                            />
                             <InputError :message="form.errors.district_id" />
                         </div>
 
@@ -778,16 +861,15 @@ onMounted(() => {
                             <Label for="logo">Village Logo</Label>
                             <div class="flex items-center gap-4 mb-2">
                                 <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-muted/20 p-2 overflow-hidden shadow-inner relative group">
-                                    <template v-if="form.logo">
-                                        <img v-if="typeof File !== 'undefined' && form.logo instanceof File" :src="logoPreviewUrl" class="h-full w-full object-contain" />
-                                        <div v-else class="text-[8px] font-black text-emerald-600 text-center uppercase tracking-tighter">Seal<br>Ready</div>
+                                    <template v-if="selectedLogoFile">
+                                        <img :src="logoPreviewUrl" class="h-full w-full object-contain" alt="Selected village logo" />
                                     </template>
-                                    <template v-else-if="editingVillage?.logo_url">
-                                        <img :src="editingVillage.logo_url" class="h-full w-full object-contain" />
+                                    <template v-else-if="editingVillage?.logo_url && !isLogoTouched">
+                                        <img :src="editingVillage.logo_url" class="h-full w-full object-contain" alt="Current village logo" />
                                     </template>
                                     <Building2 v-else class="h-6 w-6 text-muted-foreground" />
                                     
-                                    <div v-if="form.logo || editingVillage?.logo_url" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" @click="form.logo = null; isLogoTouched = true">
+                                    <div v-if="selectedLogoFile || (editingVillage?.logo_url && !isLogoTouched)" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" @click="clearSelectedLogo">
                                         <XCircle class="h-5 w-5 text-white" />
                                     </div>
                                 </div>
@@ -797,15 +879,10 @@ onMounted(() => {
                                         type="file"
                                         accept="image/*"
                                         class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer file:text-[10px] file:font-bold file:uppercase file:bg-muted/50 file:border-none file:rounded-md file:mr-4 file:px-3 shadow-sm"
-                                        @change="(e) => { 
-                                            const file = e.target.files[0];
-                                            if (file && file.size > 2 * 1024 * 1024) {
-                                                toast.error('File is too large! Maximum size is 2MB.');
-                                                e.target.value = '';
-                                                return;
-                                            }
-                                            isLogoTouched = true; 
-                                            form.logo = file; 
+                                        @change="(e) => {
+                                            const input = e.target as HTMLInputElement;
+                                            setSelectedLogoFromInput(input.files?.[0]);
+                                            input.value = '';
                                         }"
                                     />
                                 </div>

@@ -1,6 +1,15 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" style="color-scheme: light;">
     <head>
+        <script>
+            (function () {
+                var root = document.documentElement;
+                root.classList.remove('dark');
+                root.style.colorScheme = 'light';
+                try { localStorage.removeItem('appearance'); } catch (e) {}
+                document.cookie = 'appearance=;path=/;max-age=0;SameSite=Lax';
+            })();
+        </script>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -24,29 +33,9 @@
         <meta property="twitter:title" content="{{ config('app.name', 'CiSeTU') }}">
         <meta property="twitter:description" content="CiSeTU - Digital villages, connected at the scale of your community.">
         <meta property="twitter:image" content="{{ asset('images/logo.png') }}">
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-        <script>
-            (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
-
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
-                }
-            })();
-        </script>
-
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
                 background-color: oklch(1 0 0);
-            }
-
-            html.dark {
-                background-color: oklch(0.145 0 0);
             }
         </style>
 
