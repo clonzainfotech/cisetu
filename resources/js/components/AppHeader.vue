@@ -144,7 +144,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                             >
                             <SheetHeader class="flex justify-start text-left">
                                 <AppLogoIcon
-                                    class="size-6 fill-current text-black dark:text-white"
+                                    class="size-6 fill-current text-foreground"
                                 />
                             </SheetHeader>
                             <div
@@ -247,7 +247,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                                         :alt="auth.user.name"
                                     />
                                     <AvatarFallback
-                                        class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
+                                        class="rounded-lg bg-zinc-200 font-semibold text-zinc-900"
                                     >
                                         {{ getInitials(auth.user?.name) }}
                                     </AvatarFallback>

@@ -211,10 +211,10 @@ const switchToMainAdmin = () => {
                         <DropdownMenuTrigger as-child>
                             <SidebarMenuButton
                                 size="lg"
-                                class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                class="text-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-foreground"
                             >
                                 <div
-                                    class="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg border border-border bg-white text-foreground dark:bg-white/5"
+                                    class="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg border border-border bg-white text-foreground"
                                 >
                                     <img
                                         v-if="currentVillage?.logo"
@@ -225,14 +225,14 @@ const switchToMainAdmin = () => {
                                     <AppLogoIcon v-else class="size-7 text-foreground" />
                                 </div>
                                 <div class="grid flex-1 text-left text-sm leading-tight">
-                                    <span class="truncate text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                                    <span class="truncate text-[10px] font-black tracking-widest text-zinc-500 uppercase">
                                         {{ currentVillage ? 'Village Node' : 'System Context' }}
                                     </span>
                                     <span class="truncate font-bold text-foreground">
                                         {{ currentVillage?.name_en || 'Main Admin Portal' }}
                                     </span>
                                 </div>
-                                <ChevronDown class="ml-auto size-4" />
+                                <ChevronDown class="ml-auto size-4 text-muted-foreground" />
                             </SidebarMenuButton>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent

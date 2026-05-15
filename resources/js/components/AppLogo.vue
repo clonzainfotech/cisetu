@@ -10,7 +10,7 @@ const village = computed(() => page.props.village as any);
 
 <template>
     <div
-        class="flex h-8 w-auto items-center justify-center overflow-hidden rounded-md border border-border bg-white text-foreground dark:bg-zinc-950 px-1.5"
+        class="flex h-8 w-auto items-center justify-center overflow-hidden rounded-md border border-border bg-white px-1.5 text-foreground"
     >
         <img
             v-if="village?.logo"
@@ -21,10 +21,10 @@ const village = computed(() => page.props.village as any);
         <AppLogoIcon v-else class="h-5 w-auto" />
     </div>
     <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-bold font-gujarati"
+        <span class="mb-0.5 truncate font-gujarati text-sm leading-tight font-bold text-foreground"
             >{{ village?.name_local || village?.name_en || 'Village Portal' }}</span
         >
-        <span class="truncate text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+        <span class="flex items-center gap-1 truncate text-[10px] font-medium tracking-wider text-zinc-600 uppercase">
             <Crown v-if="village?.plan?.code === 'pragati'" class="size-2.5 text-amber-500 fill-current" />
             <span class="whitespace-nowrap">{{ village?.plan?.name || 'Basic Plan' }}</span>
         </span>

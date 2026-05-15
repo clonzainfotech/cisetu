@@ -32,7 +32,7 @@ const isPremium = computed(() => (page.props.village as any)?.plan?.code === 'pr
     <div class="relative flex-shrink-0">
         <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
             <AvatarImage v-if="showAvatar" :src="user.avatar!" :alt="user.name" />
-            <AvatarFallback class="rounded-lg text-black dark:text-white font-bold">
+            <AvatarFallback class="rounded-lg bg-zinc-200 font-bold text-zinc-900">
                 {{ getInitials(user.name) }}
             </AvatarFallback>
         </Avatar>
@@ -43,7 +43,7 @@ const isPremium = computed(() => (page.props.village as any)?.plan?.code === 'pr
     </div>
 
     <div class="grid flex-1 text-left text-sm leading-tight">
-        <span class="truncate font-medium">{{ user.name }}</span>
+        <span class="truncate font-medium text-foreground">{{ user.name }}</span>
         <span v-if="team" class="truncate text-xs text-muted-foreground">{{
             team.name
         }}</span>

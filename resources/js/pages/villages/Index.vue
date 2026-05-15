@@ -860,7 +860,7 @@ onMounted(() => {
                         <div class="grid gap-2">
                             <Label for="logo">Village Logo</Label>
                             <div class="flex items-center gap-4 mb-2">
-                                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-muted/20 p-2 overflow-hidden shadow-inner relative group">
+                                <div class="group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-2 shadow-inner">
                                     <template v-if="selectedLogoFile">
                                         <img :src="logoPreviewUrl" class="h-full w-full object-contain" alt="Selected village logo" />
                                     </template>
@@ -878,7 +878,7 @@ onMounted(() => {
                                         id="logo"
                                         type="file"
                                         accept="image/*"
-                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer file:text-[10px] file:font-bold file:uppercase file:bg-muted/50 file:border-none file:rounded-md file:mr-4 file:px-3 shadow-sm"
+                                        class="flex h-10 w-full cursor-pointer rounded-md border border-input bg-white px-3 py-2 text-sm text-foreground shadow-sm ring-offset-background file:mr-4 file:rounded-md file:border-none file:bg-muted/50 file:px-3 file:text-[10px] file:font-bold file:uppercase file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         @change="(e) => {
                                             const input = e.target as HTMLInputElement;
                                             setSelectedLogoFromInput(input.files?.[0]);
@@ -889,7 +889,7 @@ onMounted(() => {
                             </div>
                             
                             <!-- Logo Generator Grid -->
-                            <div v-if="form.name_en" class="space-y-3 p-4 rounded-xl border border-dashed bg-muted/5">
+                            <div v-if="form.name_en" class="space-y-3 rounded-xl border border-dashed border-border bg-white p-4">
                                 <div class="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                     <Palette class="h-3 w-3" /> Same-to-Same Stamp Suggestions
                                 </div>
@@ -898,10 +898,10 @@ onMounted(() => {
                                         v-for="v in logoVariants"
                                         :key="v.id"
                                         type="button"
-                                        class="group relative aspect-square rounded-xl border bg-card p-1.5 shadow-sm transition-all hover:scale-105 hover:border-primary hover:shadow-lg dark:bg-zinc-900"
+                                        class="group relative aspect-square rounded-xl border border-border bg-white p-1.5 shadow-sm transition-all hover:scale-105 hover:border-primary hover:shadow-lg"
                                         @click="pickGeneratedLogo(v.svg)"
                                     >
-                                        <div class="h-full w-full overflow-hidden rounded-lg opacity-90 group-hover:opacity-100">
+                                        <div class="h-full w-full overflow-hidden rounded-lg bg-white opacity-90 group-hover:opacity-100">
                                             <img :src="'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(v.svg)" class="h-full w-full object-contain" />
                                         </div>
                                     </button>
@@ -1193,7 +1193,7 @@ onMounted(() => {
 
                     <div class="p-6 space-y-6 max-h-[85vh] overflow-y-auto">
                         <!-- Token Section -->
-                        <div class="rounded-2xl border bg-zinc-50/50 dark:bg-zinc-900/30 p-5 space-y-4">
+                        <div class="rounded-2xl border border-border bg-zinc-50 p-5 space-y-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -1209,7 +1209,7 @@ onMounted(() => {
                                         :value="activeVillage.api_token || 'Token not found...'"
                                         readonly
                                         @click="(e) => (e.target as HTMLInputElement).select()"
-                                        class="h-11 font-mono bg-zinc-50 dark:bg-black border-zinc-200 dark:border-zinc-800 text-[13px] focus:ring-2 focus:ring-emerald-500 pr-10 overflow-ellipsis cursor-copy transition-all group-hover:bg-emerald-50/50"
+                                        class="h-11 cursor-copy overflow-ellipsis border-zinc-200 bg-white pr-10 font-mono text-[13px] text-foreground transition-all group-hover:bg-emerald-50/50 focus:ring-2 focus:ring-emerald-500"
                                     />
                                     <div class="absolute right-3 top-3.5">
                                         <div class="h-4 w-4 rounded-full bg-emerald-500 animate-pulse border-2 border-white shadow-sm"></div>
@@ -1269,7 +1269,7 @@ onMounted(() => {
                                             readonly
                                             :value="detailsApiExampleUrl"
                                             @click="(e) => (e.target as HTMLInputElement).select()"
-                                            class="h-8 text-[10px] font-mono bg-white dark:bg-black border-zinc-100 text-zinc-500 focus:ring-1 focus:ring-emerald-500 cursor-copy"
+                                            class="h-8 cursor-copy border-zinc-200 bg-white font-mono text-[10px] text-zinc-600 focus:ring-1 focus:ring-emerald-500"
                                         />
                                     </div>
                                 </div>
@@ -1299,7 +1299,7 @@ onMounted(() => {
                                             readonly
                                             :value="shopsApiExampleUrl"
                                             @click="(e) => (e.target as HTMLInputElement).select()"
-                                            class="h-8 text-[10px] font-mono bg-white dark:bg-black border-zinc-100 text-zinc-500 focus:ring-1 focus:ring-emerald-500 cursor-copy"
+                                            class="h-8 cursor-copy border-zinc-200 bg-white font-mono text-[10px] text-zinc-600 focus:ring-1 focus:ring-emerald-500"
                                         />
                                     </div>
                                 </div>

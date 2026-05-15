@@ -55,40 +55,40 @@ const expiryDate = computed(() => {
                 :class="[
                     planCode === 'pragati' 
                         ? 'bg-primary/[0.03] border-primary/20 hover:bg-primary/[0.08]' 
-                        : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-primary/30'
+                        : 'border-zinc-200 bg-zinc-50 hover:border-primary/30'
                 ]"
             >
                 <!-- Subtle Background Pattern (Matches Brand) -->
                 <div 
-                    class="absolute inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.05] dark:invert"
+                    class="absolute inset-0 pointer-events-none z-0 opacity-[0.03]"
                     style="background-image: url('/images/bg-pattern.png'); background-repeat: repeat; background-size: 200px; mix-blend-mode: soft-light;"
                 ></div>
 
                 <div class="relative z-10 flex items-center gap-3">
                     <div 
                         class="flex size-10 flex-shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-105"
-                        :class="planCode === 'pragati' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'"
+                        :class="planCode === 'pragati' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-zinc-200 text-zinc-700'"
                     >
                         <Crown v-if="planCode === 'pragati'" class="size-5 fill-current" />
                         <Sparkles v-else class="size-5" />
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                            <span class="text-[11px] font-black uppercase tracking-widest leading-none" :class="planCode === 'pragati' ? 'text-primary' : 'text-zinc-600 dark:text-zinc-400'">
+                            <span class="text-[11px] font-black uppercase tracking-widest leading-none" :class="planCode === 'pragati' ? 'text-primary' : 'text-zinc-800'">
                                 {{ village?.plan?.name || 'CI Vikas' }}
                             </span>
-                            <span class="rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase ring-1 ring-inset" :class="planCode === 'pragati' ? 'bg-primary text-white ring-white/10' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 ring-zinc-300 dark:ring-zinc-700'">
+                            <span class="rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase ring-1 ring-inset" :class="planCode === 'pragati' ? 'bg-primary text-white ring-white/10' : 'bg-emerald-100 text-emerald-800 ring-emerald-200'">
                                 Active
                             </span>
                         </div>
                         <div class="mt-1.5 flex flex-col gap-1">
-                            <div v-if="expiryDate" class="flex items-center gap-1 text-[9px] text-muted-foreground font-medium uppercase tracking-tight">
+                            <div v-if="expiryDate" class="flex items-center gap-1 text-[9px] font-medium tracking-tight text-zinc-600 uppercase">
                                 <Calendar class="size-2.5 opacity-70" />
                                 <span>Valid until {{ expiryDate }}</span>
                             </div>
-                            <div class="mt-3 pt-2 border-t border-primary/10 flex items-center justify-between group-hover:border-primary/20 transition-colors">
-                                <span class="text-[9px] font-bold text-primary/80 uppercase tracking-wider">Upgrade for more features</span>
-                                <ChevronRight class="size-3 text-primary/60 group-hover:translate-x-0.5 transition-transform" />
+                            <div class="mt-3 flex items-center justify-between border-t border-zinc-200 pt-2 transition-colors group-hover:border-primary/20">
+                                <span class="text-[9px] font-bold tracking-wider text-primary uppercase">Upgrade for more features</span>
+                                <ChevronRight class="size-3 text-primary transition-transform group-hover:translate-x-0.5" />
                             </div>
                         </div>
                     </div>

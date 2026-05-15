@@ -69,7 +69,7 @@ const subscription = computed(() => (page.props.subscription as any) || {});
 
             <div 
                 v-else-if="subscription.due_soon" 
-                class="bg-primary/[0.03] dark:bg-zinc-900 border-b border-primary/10 dark:border-zinc-800 px-6 py-2.5 flex items-center justify-between text-foreground dark:text-zinc-100 text-xs font-semibold animate-in fade-in slide-in-from-top duration-500"
+                class="animate-in fade-in slide-in-from-top flex items-center justify-between border-b border-primary/10 bg-primary/[0.04] px-6 py-2.5 text-xs font-semibold text-foreground duration-500"
             >
                 <div class="flex items-center gap-2">
                     <AlertCircle class="h-4 w-4 text-primary" />
@@ -77,7 +77,7 @@ const subscription = computed(() => (page.props.subscription as any) || {});
                     <span v-else-if="subscription.days_left === 1">Your subscription expires in <span class="font-bold">1 day</span>. Please renew to avoid service interruption.</span>
                     <span v-else>Your subscription expires in <span class="font-bold">{{ subscription.days_left }} days</span>. Please renew to avoid service interruption.</span>
                 </div>
-                <Link :href="plans().url" class="bg-primary/10 dark:bg-zinc-800 px-3 py-1 rounded-full text-[10px] uppercase tracking-wider hover:bg-primary/20 dark:hover:bg-zinc-700 transition-colors text-primary dark:text-zinc-100">
+                <Link :href="plans().url" class="rounded-full bg-primary/10 px-3 py-1 text-[10px] tracking-wider text-primary uppercase transition-colors hover:bg-primary/20">
                     Renew Now
                 </Link>
             </div>

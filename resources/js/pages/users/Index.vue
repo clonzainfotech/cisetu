@@ -213,20 +213,20 @@ const page = usePage();
                     <!-- Upgrade Notice for Vikas Plan (Enhanced Design) -->
                     <div 
                         v-if="limits.maxUserAccounts && limits.currentUserAccounts >= limits.maxUserAccounts && actor.isVillageAdmin"
-                        class="rounded-lg bg-primary/[0.03] dark:bg-zinc-900 border border-primary/10 dark:border-zinc-800 p-6 text-center space-y-4 animate-in fade-in zoom-in duration-300"
+                        class="animate-in fade-in zoom-in space-y-4 rounded-lg border border-primary/20 bg-primary/[0.04] p-6 text-center duration-300"
                     >
                         <div class="flex justify-center">
                             <AlertCircle class="size-8 text-primary" />
                         </div>
                         <div class="space-y-1 text-center">
-                            <h3 class="text-sm font-bold text-primary dark:text-zinc-100 uppercase tracking-widest">Subscription Limit Reached</h3>
-                            <p class="text-xs font-medium text-primary/70 dark:text-zinc-400 leading-relaxed">
+                            <h3 class="text-sm font-bold tracking-widest text-primary uppercase">Subscription Limit Reached</h3>
+                            <p class="text-xs leading-relaxed font-medium text-zinc-600">
                                 Your current plan only supports 1 admin user. <br />
                                 Upgrade to <span class="font-bold text-primary underline decoration-primary/30">CI Pragati</span> to add team members.
                             </p>
                         </div>
                         <Link :href="plans().url" class="w-full">
-                            <Button variant="outline" class="w-full h-9 border-primary/20 dark:border-zinc-800 bg-primary/5 dark:bg-zinc-800/40 hover:bg-primary/10 dark:hover:bg-zinc-700 text-primary dark:text-zinc-100 text-[10px] font-bold uppercase tracking-widest transition-all">
+                            <Button variant="outline" class="h-9 w-full border-primary/20 bg-white text-[10px] font-bold tracking-widest text-primary uppercase transition-all hover:bg-primary/5">
                                 View Pricing Plans
                             </Button>
                         </Link>
