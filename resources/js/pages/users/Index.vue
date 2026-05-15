@@ -29,6 +29,7 @@ import {
     destroy as destroyUser,
 } from '@/routes/managed-users';
 import { Shield, AlertCircle, Search, Pencil, Trash2 } from 'lucide-vue-next';
+import { useAdminContext } from '@/composables/useAdminContext';
 
 type UserRow = {
     id: number;
@@ -55,11 +56,13 @@ type Props = {
     };
     villages: Array<{ id: number; name_en: string }>;
     currentVillage: { id: number; name_en: string; subscription_plan_id: number } | null;
+    requiresVillageContext: boolean;
     limits: { maxUserAccounts: number | null; currentUserAccounts: number | null };
     actor: { id: number; isSuperMasterAdmin: boolean; isVillageAdmin: boolean };
 };
 
 const props = defineProps<Props>();
+const { actsAsVillageAdmin, currentVillage } = useAdminContext();
 
 const search = ref(props.filters.search || '');
 const limit = ref(String(props.filters.limit || 10));
@@ -129,6 +132,10 @@ const canManageUser = (user: UserRow): boolean => {
     }
 
     if (props.actor.isSuperMasterAdmin) {
+        if (props.currentVillage) {
+            return user.village_id === props.currentVillage.id;
+        }
+
         return true;
     }
 
@@ -155,6 +162,10 @@ const cancelEdit = (): void => {
 };
 
 const submit = (): void => {
+    if (props.currentVillage) {
+        form.village_id = String(props.currentVillage.id);
+    }
+
     if (editingUser.value) {
         form.put(updateUser({ user: editingUser.value.id }).url, {
             onSuccess: () => {
@@ -203,10 +214,11 @@ const doDelete = (): void => {
 
 const canCreateUser = computed(
     () =>
-        !props.limits.maxUserAccounts ||
-        props.limits.currentUserAccounts === null ||
-        props.limits.currentUserAccounts < props.limits.maxUserAccounts ||
-        props.actor.isSuperMasterAdmin,
+        !props.requiresVillageContext &&
+        (!props.limits.maxUserAccounts ||
+            props.limits.currentUserAccounts === null ||
+            props.limits.currentUserAccounts < props.limits.maxUserAccounts ||
+            props.actor.isSuperMasterAdmin),
 );
 
 defineOptions({
@@ -266,7 +278,16 @@ defineOptions({
                 </CardHeader>
                 <CardContent class="space-y-4">
                     <div
-                        v-if="users.data.length === 0"
+                        v-if="requiresVillageContext"
+                        class="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-6 text-sm text-muted-foreground"
+                    >
+                        Select a village from the sidebar (e.g. Tithal) to view and manage that
+                        village&apos;s users. The main admin portal does not list users from all
+                        villages together.
+                    </div>
+
+                    <div
+                        v-else-if="users.data.length === 0"
                         class="rounded-lg border border-dashed p-6 text-sm text-muted-foreground"
                     >
                         No users found.
@@ -406,7 +427,7 @@ defineOptions({
                                 {{
                                     editingUser
                                         ? 'Update user details or set a new password.'
-                                        : actor.isSuperMasterAdmin
+                                        : actor.isSuperMasterAdmin && !currentVillage
                                           ? 'Create village admins and village users.'
                                           : 'Create users for your village (subscription limits apply).'
                                 }}
@@ -458,7 +479,7 @@ defineOptions({
 
                                 <div class="grid gap-2">
                                     <Label>Role</Label>
-                                    <Select v-model="form.role" :disabled="actor.isVillageAdmin">
+                                    <Select v-model="form.role" :disabled="actor.isVillageAdmin || actsAsVillageAdmin">
                                         <SelectTrigger :error="form.errors.role">
                                             <SelectValue placeholder="Select role" />
                                         </SelectTrigger>
@@ -466,7 +487,7 @@ defineOptions({
                                             <SelectGroup>
                                                 <SelectItem value="user">User</SelectItem>
                                                 <SelectItem
-                                                    v-if="actor.isSuperMasterAdmin"
+                                                    v-if="actor.isSuperMasterAdmin && !currentVillage"
                                                     value="village_admin"
                                                 >
                                                     Village Admin
@@ -477,7 +498,10 @@ defineOptions({
                                     <InputError :message="form.errors.role" />
                                 </div>
 
-                                <div v-if="actor.isSuperMasterAdmin" class="grid gap-2">
+                                <div
+                                    v-if="actor.isSuperMasterAdmin && !currentVillage"
+                                    class="grid gap-2"
+                                >
                                     <Label>Village</Label>
                                     <Select v-model="form.village_id">
                                         <SelectTrigger :error="form.errors.village_id">

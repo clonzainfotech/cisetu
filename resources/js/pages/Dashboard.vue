@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { index as inquiriesIndex } from '@/routes/inquiries';
 import Heading from '@/components/Heading.vue';
+import { useAdminContext } from '@/composables/useAdminContext';
 
 const props = defineProps<{
     stats: {
@@ -54,15 +55,25 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+const { actsAsVillageAdmin, showsPlatformAdmin } = useAdminContext();
 const auth = computed(() => page.props.auth as any);
 const user = computed(() => auth.value.user);
 const permissions = computed(() => user.value?.permissions || []);
 
-const isSuperAdmin = computed(() => user.value?.is_super_master_admin || user.value?.role === 'super_master_admin');
-const isVillageAdmin = computed(() => user.value?.role === 'village_admin');
+const hasPersonalTax = computed(
+    () =>
+        actsAsVillageAdmin.value ||
+        showsPlatformAdmin.value ||
+        permissions.value.includes('personal_tax'),
+);
+const hasProfessionalTax = computed(
+    () =>
+        actsAsVillageAdmin.value ||
+        showsPlatformAdmin.value ||
+        permissions.value.includes('professional_tax'),
+);
 
-const hasPersonalTax = computed(() => isSuperAdmin.value || isVillageAdmin.value || permissions.value.includes('personal_tax'));
-const hasProfessionalTax = computed(() => isSuperAdmin.value || isVillageAdmin.value || permissions.value.includes('professional_tax'));
+const showPlatformDashboard = computed(() => props.stats?.is_super_admin === true);
 
 const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -95,12 +106,12 @@ defineOptions({
             <Heading
                 variant="small"
                 title="Dashboard"
-                :description="stats?.is_super_admin ? 'Platform-wide statistics and management overview' : 'Real-time statistics and tax records overview'"
+                :description="showPlatformDashboard ? 'Platform-wide statistics and management overview' : 'Real-time statistics and tax records overview'"
             />
         </div>
 
         <!-- No Permissions View -->
-        <div v-if="!hasPersonalTax && !hasProfessionalTax && !isSuperAdmin" class="flex flex-col items-center justify-center py-20 text-center">
+        <div v-if="!hasPersonalTax && !hasProfessionalTax && !showsPlatformAdmin && !actsAsVillageAdmin" class="flex flex-col items-center justify-center py-20 text-center">
             <ShieldAlert class="size-12 text-muted-foreground mb-4" />
             <h3 class="text-lg font-bold">Access Restricted</h3>
             <p class="text-sm text-muted-foreground max-w-xs mx-auto">
@@ -111,7 +122,7 @@ defineOptions({
         <div v-else class="space-y-8">
             <!-- Global Stats (Super Admin) -->
             <div 
-                v-if="stats && stats.is_super_admin" 
+                v-if="stats && showPlatformDashboard" 
                 class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
             >
                 <Card>
@@ -268,13 +279,13 @@ defineOptions({
             <div 
                 :class="[
                     'grid gap-6',
-                    (stats && (isSuperAdmin || (hasPersonalTax && hasProfessionalTax))) ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'
+                    (stats && (showPlatformDashboard || (hasPersonalTax && hasProfessionalTax))) ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'
                 ]"
             >
                 <!-- Revenue Distribution Chart / Plan Breakdown -->
                 <Card v-if="stats" class="lg:col-span-2">
                     <CardHeader class="flex flex-row items-center justify-between">
-                        <div v-if="stats.is_super_admin">
+                        <div v-if="showPlatformDashboard">
                             <CardTitle class="text-sm font-bold uppercase">Subscription Breakdown</CardTitle>
                             <p class="text-[11px] text-muted-foreground mt-1">Village distribution across plans</p>
                         </div>
@@ -285,7 +296,7 @@ defineOptions({
                         <TrendingUp class="size-4 text-muted-foreground/30" />
                     </CardHeader>
                     <CardContent class="pt-6">
-                        <div v-if="stats.is_super_admin" class="space-y-6">
+                        <div v-if="showPlatformDashboard" class="space-y-6">
                             <div v-for="plan in stats.plans_breakdown" :key="plan.code" class="space-y-2">
                                 <div class="flex items-center justify-between text-xs font-medium">
                                     <span class="text-muted-foreground">{{ plan.name }} Plan</span>
@@ -331,10 +342,10 @@ defineOptions({
                         <div class="mt-8 grid grid-cols-2 gap-4 border-t pt-6">
                             <div class="text-center p-3 rounded-lg bg-muted/30">
                                 <p class="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                                    {{ stats.is_super_admin ? 'Avg. per Village' : 'Avg. per Property' }}
+                                    {{ showPlatformDashboard ? 'Avg. per Village' : 'Avg. per Property' }}
                                 </p>
                                 <p class="text-sm font-bold mt-1">
-                                    {{ stats.is_super_admin 
+                                    {{ showPlatformDashboard
                                         ? formatCurrency(stats.total_revenue / (stats.total_villages || 1))
                                         : formatCurrency(stats.total_revenue / (stats.total_properties || 1)) 
                                     }}
@@ -349,12 +360,12 @@ defineOptions({
                 </Card>
 
                 <!-- Quick Actions -->
-                <Card :class="[!(hasPersonalTax && hasProfessionalTax || isSuperAdmin) && 'md:max-w-md']">
+                <Card :class="[!(hasPersonalTax && hasProfessionalTax || showPlatformDashboard) && 'md:max-w-md']">
                     <CardHeader>
                         <CardTitle class="text-sm font-bold uppercase">Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent class="grid gap-3">
-                        <template v-if="isSuperAdmin">
+                        <template v-if="showPlatformDashboard">
                             <Button variant="outline" as-child class="justify-between h-11 px-4">
                                 <Link href="/villages">
                                     <div class="flex items-center gap-3">
@@ -396,7 +407,7 @@ defineOptions({
                             </Button>
                         </template>
 
-                        <div v-if="!hasPersonalTax && !hasProfessionalTax && !isSuperAdmin" class="py-4 text-center text-xs text-muted-foreground">
+                        <div v-if="!hasPersonalTax && !hasProfessionalTax && !showPlatformDashboard && !actsAsVillageAdmin" class="py-4 text-center text-xs text-muted-foreground">
                             No actions available.
                         </div>
                     </CardContent>
@@ -404,7 +415,7 @@ defineOptions({
             </div>
 
             <!-- Inquiries Section (Super Admin) -->
-            <div v-if="isSuperAdmin && recent_inquiries && recent_inquiries.length > 0" class="space-y-6">
+            <div v-if="showPlatformDashboard && recent_inquiries && recent_inquiries.length > 0" class="space-y-6">
                 <div class="flex items-center justify-between">
                     <Heading
                         variant="small"

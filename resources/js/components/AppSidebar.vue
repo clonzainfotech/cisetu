@@ -48,15 +48,19 @@ import { plans } from '@/routes/subscriptions';
 // Since I just added them to web.php, I'll use strings or update wayfinder
 // Assuming wayfinder will pick them up after build
 import type { NavItem } from '@/types';
+import { useAdminContext } from '@/composables/useAdminContext';
 
 const page = usePage();
 
 const dashboardUrl = computed(() => dashboard().url);
-const auth = computed(() => page.props.auth as any);
-const currentVillage = computed(() => page.props.village as any);
-
-const isSuperAdmin = computed(() => auth.value.user?.is_super_master_admin || auth.value.user?.role === 'super_master_admin');
-const isVillageAdmin = computed(() => auth.value.user?.role === 'village_admin');
+const {
+    auth,
+    currentVillage,
+    isSuperAdmin,
+    isVillageAdmin,
+    showsPlatformAdmin,
+    actsAsVillageAdmin,
+} = useAdminContext();
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
@@ -67,7 +71,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         }
     ];
 
-    if (isSuperAdmin.value) {
+    if (showsPlatformAdmin.value) {
         items.push(
             {
                 title: 'Users',
@@ -93,14 +97,20 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Villages',
                 href: villagesIndex().url,
                 icon: MapPin,
-            }
+            },
         );
     }
 
     if (currentVillage.value) {
-        const userPermissions = auth.value.user?.permissions || [];
-        const hasPersonalTax = isSuperAdmin.value || isVillageAdmin.value || userPermissions.includes('personal_tax');
-        const hasProfessionalTax = isSuperAdmin.value || isVillageAdmin.value || userPermissions.includes('professional_tax');
+        const userPermissions = (auth.value.user?.permissions as string[]) || [];
+        const hasPersonalTax =
+            actsAsVillageAdmin.value ||
+            isSuperAdmin.value ||
+            userPermissions.includes('personal_tax');
+        const hasProfessionalTax =
+            actsAsVillageAdmin.value ||
+            isSuperAdmin.value ||
+            userPermissions.includes('professional_tax');
 
         if (hasPersonalTax) {
             items.push({
@@ -118,14 +128,13 @@ const mainNavItems = computed<NavItem[]>(() => {
             });
         }
 
-        // Add Team Management and Plans for Village Admins
-        if (isVillageAdmin.value && !isSuperAdmin.value) {
+        if (actsAsVillageAdmin.value) {
             items.push({
                 title: 'Manage Team',
                 href: usersIndex().url,
                 icon: Users,
             });
-            
+
             items.push({
                 title: 'Pricing Plans',
                 href: plans().url,
@@ -195,7 +204,6 @@ const switchToMainAdmin = () => {
     const protocol = window.location.protocol;
     const baseDomain = (page.props as any).app_url?.replace(/^https?:\/\//, '') || 'cis.test';
     
-    console.log('Switching to main admin:', baseDomain);
     window.location.href = `${protocol}//${baseDomain}/dashboard`;
 };
 

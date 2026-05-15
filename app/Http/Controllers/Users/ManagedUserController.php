@@ -35,10 +35,11 @@ class ManagedUserController extends Controller
             ? Village::query()->select(['id', 'name_en'])->orderBy('name_en')->get()
             : collect();
 
-        $villageId = $actor->isSuperMasterAdmin() ? null : $actor->village_id;
+        ['village' => $village, 'villageId' => $villageId, 'requiresVillageContext' => $requiresVillageContext] = $this->resolveManagedUsersContext($request, $actor);
 
         $users = User::query()
             ->when($villageId, fn ($q) => $q->where('village_id', $villageId))
+            ->when($requiresVillageContext, fn ($q) => $q->whereRaw('1 = 0'))
             ->where('is_super_master_admin', false)
             ->where('role', '!=', 'super_master_admin')
             ->when($search, function ($query) use ($search) {
@@ -56,8 +57,6 @@ class ManagedUserController extends Controller
                 'limit' => $limit,
             ], fn ($value) => $value !== null && $value !== ''));
 
-        $village = $actor->isVillageAdmin() ? $actor->village()->select(['id', 'name_en', 'subscription_plan_id'])->with('plan')->first() : null;
-
         $maxUserAccounts = $village?->maxUserAccounts();
         $currentUserAccounts = $village ? User::where('village_id', $village->id)->count() : null;
 
@@ -69,6 +68,7 @@ class ManagedUserController extends Controller
             ],
             'villages' => $villages,
             'currentVillage' => $village,
+            'requiresVillageContext' => $requiresVillageContext,
             'limits' => [
                 'maxUserAccounts' => $maxUserAccounts,
                 'currentUserAccounts' => $currentUserAccounts,
@@ -90,13 +90,17 @@ class ManagedUserController extends Controller
 
         $role = $request->validated('role');
 
-        $villageId = $actor->isSuperMasterAdmin()
-            ? (int) $request->validated('village_id')
-            : (int) $actor->village_id;
+        ['villageId' => $contextVillageId] = $this->resolveManagedUsersContext($request, $actor);
 
-        if ($actor->isVillageAdmin()) {
+        $villageId = $contextVillageId ?? ($actor->isSuperMasterAdmin()
+            ? (int) $request->validated('village_id')
+            : (int) $actor->village_id);
+
+        if ($actor->isVillageAdmin() || $this->superAdminInVillageContext($request, $actor)) {
             abort_if($role !== 'user', 403);
         }
+
+        abort_if($actor->isSuperMasterAdmin() && $villageId === null, 403);
 
         $village = Village::query()->with(['subscription.plan'])->findOrFail($villageId);
 
@@ -128,13 +132,15 @@ class ManagedUserController extends Controller
 
         $this->authorizeManage($actor, $user);
 
-        $villageId = $actor->isSuperMasterAdmin()
+        ['villageId' => $contextVillageId] = $this->resolveManagedUsersContext($request, $actor);
+
+        $villageId = $contextVillageId ?? ($actor->isSuperMasterAdmin()
             ? (int) $request->validated('village_id')
-            : (int) $user->village_id;
+            : (int) $user->village_id);
 
         $role = $request->validated('role');
 
-        if ($actor->isVillageAdmin()) {
+        if ($actor->isVillageAdmin() || $this->superAdminInVillageContext($request, $actor)) {
             abort_if($role !== 'user', 403);
         }
 
@@ -183,5 +189,50 @@ class ManagedUserController extends Controller
             abort_unless($target->village_id === $actor->village_id, 403);
             abort_unless($target->role === 'user', 403);
         }
+
+        if ($actor->isSuperMasterAdmin()) {
+            $contextVillage = request()->get('village');
+
+            if ($contextVillage instanceof Village) {
+                abort_unless($target->village_id === $contextVillage->id, 403);
+            }
+        }
+    }
+
+    /**
+     * @return array{village: ?Village, villageId: ?int, requiresVillageContext: bool}
+     */
+    protected function superAdminInVillageContext(Request $request, User $actor): bool
+    {
+        return $actor->isSuperMasterAdmin() && $request->get('village') instanceof Village;
+    }
+
+    protected function resolveManagedUsersContext(Request $request, User $actor): array
+    {
+        $contextVillage = $request->get('village');
+
+        if ($contextVillage instanceof Village) {
+            return [
+                'village' => $contextVillage->loadMissing('plan'),
+                'villageId' => $contextVillage->id,
+                'requiresVillageContext' => false,
+            ];
+        }
+
+        if ($actor->isVillageAdmin()) {
+            $village = $actor->village()->select(['id', 'name_en', 'subscription_plan_id'])->with('plan')->first();
+
+            return [
+                'village' => $village,
+                'villageId' => $actor->village_id,
+                'requiresVillageContext' => false,
+            ];
+        }
+
+        return [
+            'village' => null,
+            'villageId' => null,
+            'requiresVillageContext' => true,
+        ];
     }
 }

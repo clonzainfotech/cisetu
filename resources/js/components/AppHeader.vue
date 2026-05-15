@@ -41,6 +41,7 @@ import { index as subscriptionsIndex } from '@/routes/subscriptions';
 import { index as homesIndex } from '@/routes/homes';
 import { index as shopsIndex } from '@/routes/shops';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import { useAdminContext } from '@/composables/useAdminContext';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -56,8 +57,7 @@ const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
 const dashboardUrl = computed(() => dashboard().url);
 
-const isSuperAdmin = computed(() => auth.value.user?.is_super_master_admin || auth.value.user?.role === 'super_master_admin');
-const isVillageAdmin = computed(() => auth.value.user?.role === 'village_admin');
+const { showsPlatformAdmin, actsAsVillageAdmin, currentVillage } = useAdminContext();
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
@@ -71,7 +71,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         }
     ];
 
-    if (isSuperAdmin.value) {
+    if (showsPlatformAdmin.value) {
         items.push(
             {
                 title: 'Users',
@@ -97,11 +97,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Villages',
                 href: villagesIndex().url,
                 icon: MapPin,
-            }
+            },
         );
     }
 
-    if (page.props.village || (auth.value.user?.village_id && !isSuperAdmin.value)) {
+    if (currentVillage.value || actsAsVillageAdmin.value) {
         items.push(
             {
                 title: 'Personal Tax',
@@ -112,7 +112,28 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Professional Tax',
                 href: shopsIndex().url,
                 icon: Store,
-            }
+            },
+        );
+
+        if (actsAsVillageAdmin.value) {
+            items.push({
+                title: 'Manage Team',
+                href: usersIndex().url,
+                icon: Users,
+            });
+        }
+    } else if (auth.value.user?.village_id) {
+        items.push(
+            {
+                title: 'Personal Tax',
+                href: homesIndex().url,
+                icon: HomeIcon,
+            },
+            {
+                title: 'Professional Tax',
+                href: shopsIndex().url,
+                icon: Store,
+            },
         );
     }
 
